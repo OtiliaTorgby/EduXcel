@@ -27,11 +27,6 @@
 
 ---
 
-## Team Members
-- Otilia Torgby (Team Lead / Flutter Developer)
-- [Add others here]
-
----
 
 ## Tech Stack
 - Flutter
