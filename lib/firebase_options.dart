@@ -3,6 +3,7 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 ///
@@ -46,8 +47,10 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDE0nq-C-f5wuOU_GmVgvftOrtXqiG3zak',
+  static final FirebaseOptions web = FirebaseOptions(
+    // Retrieve the API key from the loaded environment variables
+    // The '!' is used to assert that the value is non-null, assuming .env is loaded correctly.
+    apiKey: dotenv.env['FIREBASE_API_KEY']!,
     appId: '1:947251316245:web:06bf96d789f7239043b01c',
     messagingSenderId: '947251316245',
     projectId: 'eduxcel-5a44b',
