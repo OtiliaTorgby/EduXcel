@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Screens
 import 'sign_in_screen.dart';
+import 'home_page.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications_page.dart';
 
@@ -30,11 +31,11 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
 
-      //  Starting screen (Login or Sign-In)
       home: const SignInScreen(),
 
-      //  Define routes for easy navigation
+      // Define routes for smooth navigation
       routes: {
+        '/home': (context) => const HomePage(),
         '/profile': (context) => const ProfileScreen(),
         '/notifications': (context) => const NotificationsPage(),
       },
