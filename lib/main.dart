@@ -13,6 +13,7 @@ import 'screens/profile_screen.dart';
 import 'screens/notifications_page.dart';
 import 'complete_profile_screen.dart';
 import 'home_page.dart';
+import 'admin_page.dart';
 
 void main() async {
   // Ensure Flutter and Firebase are initialized before the app starts
@@ -92,13 +93,17 @@ class AuthWrapper extends StatelessWidget {
 
         final user = snapshot.data;
 
-        if (user != null) {
-          // If the user is signed in, send them to the main dashboard
-          return HomePage();
+                if (user != null) {
+          // Check if the signed-in user is the admin
+          if (user.email == 'admin@eduxcel.com') {
+            return const AdminPage(); // <-- Admin route
+          } else {
+            return const HomePage(); // Normal user
+          }
         } else {
-          // If the user is NOT signed in, send them to the sign-in screen
-          return const SignInScreen();
+          return const SignInScreen(); // Not signed in
         }
+
       },
     );
   }
