@@ -15,7 +15,7 @@ class _AdminPageState extends State<AdminPage> {
     return Scaffold(
       key: _scaffoldKey,
 
-      // 📍 Drawer Menu
+      // Drawer Menu
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -40,7 +40,7 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
 
-      // 📍 AppBar
+      // AppBar
       appBar: AppBar(
         backgroundColor: Colors.deepPurple,
         title: const Text('Admin Dashboard'),
@@ -56,7 +56,7 @@ class _AdminPageState extends State<AdminPage> {
         ],
       ),
 
-      // 📍 Main Body
+      //  Main Body
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -111,7 +111,7 @@ class _AdminPageState extends State<AdminPage> {
         ),
       ),
 
-      // 📍 Bottom Navigation
+      //  Bottom Navigation
       bottomNavigationBar: BottomNavigationBar(
         selectedItemColor: Colors.deepPurple,
         unselectedItemColor: Colors.grey,
@@ -126,7 +126,7 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
-  // 📍 Drawer Menu Item
+  //  Drawer Menu Item
   ListTile _buildMenuItem(IconData icon, String title) {
     return ListTile(
       leading: Icon(icon, color: Colors.deepPurple),
@@ -139,7 +139,7 @@ class _AdminPageState extends State<AdminPage> {
   }
 }
 
-// 📍 Dashboard Card Widget
+//  Dashboard Card Widget
 class _DashboardCard extends StatelessWidget {
   final String title;
   final IconData icon;
