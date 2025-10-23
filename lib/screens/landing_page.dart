@@ -1,4 +1,3 @@
-// landing_page.dart
 import 'package:flutter/material.dart';
 
 class LandingPage extends StatelessWidget {
@@ -10,7 +9,7 @@ class LandingPage extends StatelessWidget {
       backgroundColor: const Color(0xFFF8F9FA),
       body: Stack(
         children: [
-          // 🎨 Background Gradient
+          // Background Gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -21,13 +20,13 @@ class LandingPage extends StatelessWidget {
             ),
           ),
 
-          // 🌟 Main Content
+          // Main Content
           SafeArea(
             child: Column(
               children: [
                 const Spacer(flex: 1),
 
-                // 📘 Icon & Title
+                // Icon & Title
                 const Icon(
                   Icons.school,
                   color: Colors.white,
@@ -54,7 +53,7 @@ class LandingPage extends StatelessWidget {
 
                 const SizedBox(height: 30),
 
-                // 📝 Description Section (your request 💜)
+                // Description Section 
                 Expanded(
                   flex: 2,
                   child: Padding(
@@ -78,7 +77,7 @@ class LandingPage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // 🚪 Buttons
+                // Buttons
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(
