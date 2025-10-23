@@ -14,6 +14,7 @@ import 'screens/notifications_page.dart';
 import 'screens/complete_profile_screen.dart';
 import 'screens/home_page.dart';
 import 'screens/admins/admin_page.dart';
+import 'screens/landing_page.dart';
 
 void main() async {
   // Ensure Flutter and Firebase are initialized before the app starts
@@ -51,12 +52,13 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       // Starting the app using the AuthWrapper for initial routing logic
-      initialRoute: '/',
+      initialRoute: '/landing',
 
       // Define all app routes
       routes: {
         // The root route checks auth state and directs the user (AuthWrapper)
         '/': (context) => const AuthWrapper(),
+        '/landing': (context) => const LandingPage(),
 
         // Define explicit routes for navigation
         '/sign-in': (context) => const SignInScreen(), // Explicit sign-in route
