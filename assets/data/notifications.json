@@ -1,0 +1,20 @@
+[
+  {
+    "title": "New Course Available",
+    "message": "“Mobile App Development” has been added to your program list.",
+    "time": "2 hours ago",
+    "isRead": false
+  },
+  {
+    "title": "Assignment Reminder",
+    "message": "Your “Database Systems” assignment is due tomorrow.",
+    "time": "5 hours ago",
+    "isRead": false
+  },
+  {
+    "title": "Course Update",
+    "message": "“Web Development Fundamentals” materials have been updated.",
+    "time": "1 day ago",
+    "isRead": false
+  }
+]
