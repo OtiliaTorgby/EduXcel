@@ -31,11 +31,11 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
 
-      home: const HomePage(),
+      home: const SignInScreen(),
 
       // Define routes for smooth navigation
       routes: {
-        '/home': (context) => const HomePage(),
+        '/home': (context) => const StudentHomePage(),
         '/profile': (context) => const ProfileScreen(),
         '/notifications': (context) => const NotificationsPage(),
       },
