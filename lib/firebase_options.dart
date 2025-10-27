@@ -73,8 +73,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '947251316245',
     projectId: 'eduxcel-5a44b',
     storageBucket: 'eduxcel-5a44b.firebasestorage.app',
-    androidClientId: '947251316245-gkujo048k15i93hc7g4rd0sstgrhb33n.apps.googleusercontent.com',
-    iosClientId: '947251316245-qqgc7j890b3rup4v2dlented3pjq9tst.apps.googleusercontent.com',
+    androidClientId:
+        '947251316245-gkujo048k15i93hc7g4rd0sstgrhb33n.apps.googleusercontent.com',
+    iosClientId:
+        '947251316245-qqgc7j890b3rup4v2dlented3pjq9tst.apps.googleusercontent.com',
     iosBundleId: 'com.example.eduxcel',
   );
 }

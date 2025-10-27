@@ -45,3 +45,9 @@ This repository contains:
 
 ---
 
+## Updates
+- Connected notifications to mock JSON data
+- Added a feedback form with email validation
+- Updated UI for consistency
+
+
