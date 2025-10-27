@@ -1,4 +1,3 @@
-// sign_in_screen.dart
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,6 +15,16 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final _auth = FirebaseAuth.instance;
+  
+  // FIX: Initialize GoogleSignIn once as a state variable
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    // The clientId is provided here once for the web platform, 
+    // ensuring the new GIS flow is used correctly.
+    clientId: kIsWeb
+        ? "947251316245-t6f5iotprj122jrc9r8pddltl8rf9b2h.apps.googleusercontent.com"
+        : null, // Null for mobile/desktop
+  );
+
   final _formKey = GlobalKey<FormState>();
   AuthMode _authMode = AuthMode.signIn;
   String _email = '';
@@ -58,6 +67,12 @@ class _SignInScreenState extends State<SignInScreen> {
           password: _password,
         );
       }
+      
+      // ⭐ NAVIGATION FIX: Navigate on success (Email/Password)
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
+
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred, please check your credentials.';
       if (e.message != null) {
@@ -75,26 +90,14 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  // Function to handle Google Sign-In (Moved from home_page.dart)
+  // Function to handle Google Sign-In
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isLoading = true;
     });
     try {
-      final GoogleSignIn googleSignIn;
-
-      // Initialize GoogleSignIn with clientId only for web
-      if (kIsWeb) {
-        googleSignIn = GoogleSignIn(
-          // PASTE YOUR WEB CLIENT ID HERE (Needed for web)
-          clientId: "947251316245-t6f5iotprj122jrc9r8pddltl8rf9b2h.apps.googleusercontent.com",
-        );
-      } else {
-        // For Android/iOS, no clientId needed here
-        googleSignIn = GoogleSignIn();
-      }
-
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      // Use the pre-initialized state variable _googleSignIn
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
         // User canceled the sign-in
@@ -113,6 +116,11 @@ class _SignInScreenState extends State<SignInScreen> {
 
       // Sign into Firebase with the Google credential
       await _auth.signInWithCredential(credential);
+      
+      // ⭐ NAVIGATION FIX: Navigate on success (Google)
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
 
     } on FirebaseAuthException catch (e) {
       _showError('Failed to sign in with Google: ${e.message}');
