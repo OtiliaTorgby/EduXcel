@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "951002040935",
+    "project_id": "eduxcel-4305d",
+    "storage_bucket": "eduxcel-4305d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:951002040935:android:d6b6bdb8abdea1c4b022c2",
+        "android_client_info": {
+          "package_name": "com.example.eduxcel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBlLhsM7wrw5fCiEZvSXbSzTPa7eOsRpk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

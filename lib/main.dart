@@ -5,11 +5,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Screens
 import 'sign_in_screen.dart';
-import 'home_page.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications_page.dart';
+import 'home_page.dart';
 
-void main() async {
+Future<void> main() async {
   // Ensure Flutter and Firebase are initialized before the app starts
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
@@ -25,15 +25,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EduXcel Firebase App',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF9C27B0),
       ),
-      debugShowCheckedModeBanner: false,
 
+      // 👇 Set the first screen
       home: const SignInScreen(),
 
-      // Define routes for smooth navigation
+      // 👇 Define routes for smooth navigation
       routes: {
         '/home': (context) => const StudentHomePage(),
         '/profile': (context) => const ProfileScreen(),
