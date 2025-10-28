@@ -15,11 +15,11 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final _auth = FirebaseAuth.instance;
-  
-  // FIX: Initialize GoogleSignIn once as a state variable
+
+  // FIX: Initialize GoogleSignIn once as a state variable with the correct Client ID
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    // The clientId is provided here once for the web platform, 
-    // ensuring the new GIS flow is used correctly.
+    // NOTE: Replace this placeholder with your actual Web Client ID if it changes.
+    // The format is: <ID>.apps.googleusercontent.com
     clientId: kIsWeb
         ? "947251316245-t6f5iotprj122jrc9r8pddltl8rf9b2h.apps.googleusercontent.com"
         : null, // Null for mobile/desktop
@@ -34,6 +34,8 @@ class _SignInScreenState extends State<SignInScreen> {
   // --- Utility Functions ---
 
   void _showError(String message) {
+    // Check if the widget is still in the tree before showing the Snackbar
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -48,34 +50,47 @@ class _SignInScreenState extends State<SignInScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+    // This calls the onSaved callbacks which set _email and _password
     _formKey.currentState!.save();
+
+    // Now that the data is saved, we trim it once more just to be safe
+    final email = _email.trim();
+    final password = _password.trim();
+
     setState(() {
       _isLoading = true;
     });
 
     try {
       if (_authMode == AuthMode.signIn) {
-        // Log user in
+        // CORRECT: Using the standard method for Email/Password Sign In
         await _auth.signInWithEmailAndPassword(
-          email: _email,
-          password: _password,
+          email: email,
+          password: password,
         );
       } else {
-        // Sign user up
+        // CORRECT: Using the standard method for Email/Password Sign Up
         await _auth.createUserWithEmailAndPassword(
-          email: _email,
-          password: _password,
+          email: email,
+          password: password,
         );
       }
-      
-      // ⭐ NAVIGATION FIX: Navigate on success (Email/Password)
+
+      // Navigate on success
       if (mounted) {
+        // We use pushReplacementNamed to prevent the user from going back to the sign-in screen
         Navigator.of(context).pushReplacementNamed('/home');
       }
 
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred, please check your credentials.';
-      if (e.message != null) {
+
+      // The search results confirm that Firebase sometimes returns the generic 'invalid-credential'
+      // or 'The supplied auth credential is incorrect' error even for wrong password/user not found
+      // due to email enumeration protection (since September 2023).
+      if (e.code == 'invalid-credential' || e.code == 'wrong-password' || e.code == 'user-not-found') {
+        message = "Invalid email or password. Please try again.";
+      } else if (e.message != null) {
         message = e.message!;
       }
       _showError(message);
@@ -96,28 +111,26 @@ class _SignInScreenState extends State<SignInScreen> {
       _isLoading = true;
     });
     try {
-      // Use the pre-initialized state variable _googleSignIn
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
       if (googleUser == null) {
-        // User canceled the sign-in
         setState(() {
           _isLoading = false;
         });
-        return;
+        return; // User canceled the sign-in
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
+      // CORRECT: This is where signInWithCredential is properly used (with Google tokens)
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Sign into Firebase with the Google credential
       await _auth.signInWithCredential(credential);
-      
-      // ⭐ NAVIGATION FIX: Navigate on success (Google)
+
+      // Navigate on success (Google)
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
@@ -171,7 +184,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     // Email Field
                     TextFormField(
                       decoration: const InputDecoration(
-                        labelText: 'Username or email address',
+                        labelText: 'Email address',
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.emailAddress,
@@ -182,7 +195,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         return null;
                       },
                       onSaved: (value) {
-                        _email = value!.trim();
+                        _email = value!.trim(); // Email is trimmed
                       },
                     ),
                     const SizedBox(height: 16),
@@ -200,7 +213,8 @@ class _SignInScreenState extends State<SignInScreen> {
                         return null;
                       },
                       onSaved: (value) {
-                        _password = value!;
+                        // FIX: Add .trim() here to prevent whitespace from causing "malformed credential"
+                        _password = value!.trim();
                       },
                     ),
 

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:async'; // <-- 1. Import dart:async for StreamSubscription
 import 'sign_in_screen.dart';
 
 class HomePage extends StatefulWidget {
@@ -13,20 +14,37 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   User? _user;
+  // 2. Declare a variable to hold the stream subscription
+  late final StreamSubscription<User?> _authStateSubscription;
 
   @override
   void initState() {
     super.initState();
-    FirebaseAuth.instance.authStateChanges().listen((user) {
-      setState(() {
-        _user = user;
-      });
+
+    // 3. Store the subscription when you start listening
+    _authStateSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      // 4. Always check if the widget is mounted before calling setState
+      if (mounted) {
+        setState(() {
+          _user = user;
+        });
+      }
     });
   }
 
+  // 5. Override dispose() to cancel the subscription
+  @override
+  void dispose() {
+    _authStateSubscription.cancel();
+    super.dispose();
+  }
+
   Future<void> _signOut() async {
+    // Note: The GoogleSignIn initialization error (ClientID not set)
+    // must be fixed in your web/index.html file or main.dart.
     await FirebaseAuth.instance.signOut();
     await GoogleSignIn().signOut();
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Signed out successfully! 👋')),
@@ -37,6 +55,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     if (_user == null) {
+      // It is good practice to ensure this navigator push replacement
+      // is not happening when the widget is still in the process of building.
+      // However, since the build method is returning a different screen, this is usually fine.
       return const SignInScreen();
     } else {
       return Scaffold(
