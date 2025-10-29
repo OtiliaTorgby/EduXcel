@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../screens/feedbackScreen.dart';
+import '../styles/notification_style.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -8,51 +12,47 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
-  List<Map<String, dynamic>> notifications = [
-    {
-      'title': 'New Course Available',
-      'message':
-          '“Mobile App Development” has been added to your program list.',
-      'time': '2 hours ago',
-      'isRead': false,
-    },
-    {
-      'title': 'Assignment Reminder',
-      'message': 'Your “Database Systems” assignment is due tomorrow.',
-      'time': '5 hours ago',
-      'isRead': false,
-    },
-    {
-      'title': 'Course Update',
-      'message': '“Web Development Fundamentals” materials have been updated.',
-      'time': '1 day ago',
-      'isRead': false,
-    },
-  ];
+  List<Map<String, dynamic>> notifications = [];
 
-  /// Simulate a refresh (you can later replace this with a backend call)
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    try {
+      final String response =
+      await rootBundle.loadString('assets/data/notifications.json');
+      final List<dynamic> data = json.decode(response);
+      setState(() {
+        notifications =
+            data.map((item) => Map<String, dynamic>.from(item)).toList();
+      });
+    } catch (e) {
+      debugPrint("Failed to load notifications: $e");
+    }
+  }
+
   Future<void> _refreshNotifications() async {
     await Future.delayed(const Duration(seconds: 1));
+
+    // Reload existing notifications
+    await _loadNotifications();
+
+    // Add simulated new notification at the top
     setState(() {
       notifications.insert(0, {
         'title': 'New Announcement',
-        'message': '“UI/UX Design” workshop is happening tomorrow!',
+        'message': '“UI/UX Design Workshop” is happening tomorrow!',
         'time': 'Just now',
         'isRead': false,
       });
     });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Notifications updated')));
-  }
-
-  void _markAllAsRead() {
-    setState(() {
-      for (var n in notifications) {
-        n['isRead'] = true;
-      }
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Notifications refreshed!')),
+    );
   }
 
   void _markAsRead(int index) {
@@ -61,144 +61,169 @@ class _NotificationsPageState extends State<NotificationsPage> {
     });
   }
 
+  void _markAllAsRead() {
+    setState(() {
+      for (var notification in notifications) {
+        notification['isRead'] = true;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        title: const Text(
-          'Notifications',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-            color: Colors.white,
-            letterSpacing: 0.5,
+      appBar: _buildAppBar(),
+      body: _buildBody(),
+      floatingActionButton: _buildFeedbackButton(),
+    );
+  }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      centerTitle: true,
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      title: const Text(
+        'Notifications',
+        style: NotificationStyles.appBarTextStyle,
+      ),
+      actions: [
+        TextButton(
+          onPressed: _markAllAsRead,
+          child: const Text(
+            'Mark all as read',
+            style: TextStyle(color: Colors.white),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: _markAllAsRead,
-            child: const Text(
-              'Mark all as read',
-              style: TextStyle(color: Colors.white),
+      ],
+    );
+  }
+
+  Widget _buildBody() {
+    return Container(
+      decoration: NotificationStyles.backgroundGradient,
+      child: RefreshIndicator(
+        onRefresh: _refreshNotifications,
+        color: Colors.white,
+        backgroundColor: Colors.purpleAccent,
+        child: notifications.isEmpty
+            ? ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            const SizedBox(height: NotificationStyles.emptyStateTopPadding),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(
+                    Icons.inbox_rounded,
+                    color: Colors.white70,
+                    size: NotificationStyles.emptyStateIconSize,
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    "You're all caught up!",
+                    style: NotificationStyles.emptyStateTextStyle,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        )
+            : ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(
+            top: NotificationStyles.listTopPadding,
+            bottom: NotificationStyles.listBottomPadding,
+          ),
+          itemCount: notifications.length,
+          itemBuilder: (context, index) {
+            return NotificationCard(
+              notification: notifications[index],
+              onMarkAsRead: () => _markAsRead(index),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeedbackButton() {
+    return FloatingActionButton.extended(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const FeedbackPage()),
+        );
+      },
+      backgroundColor: NotificationStyles.primaryPurple,
+      icon: const Icon(Icons.feedback, color: Colors.white),
+      label: const Text(
+        'Give Feedback',
+        style: TextStyle(color: Colors.white),
+      ),
+    );
+  }
+}
+
+// Notification Card Widget
+class NotificationCard extends StatelessWidget {
+  final Map<String, dynamic> notification;
+  final VoidCallback onMarkAsRead;
+
+  const NotificationCard({
+    super.key,
+    required this.notification,
+    required this.onMarkAsRead,
+  });
+
+  bool get isRead => notification['isRead'] as bool;
+  String get title => notification['title'] as String;
+  String get message => notification['message'] as String;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: NotificationStyles.cardHorizontalPadding,
+        vertical: NotificationStyles.cardVerticalPadding,
+      ),
+      child: Card(
+        elevation: NotificationStyles.cardElevation(isRead),
+        shadowColor: Colors.black26,
+        color: NotificationStyles.cardColor(isRead),
+        shape: NotificationStyles.cardShape,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+          leading: CircleAvatar(
+            radius: NotificationStyles.avatarRadius,
+            backgroundColor:
+            NotificationStyles.avatarBackgroundColor(isRead),
+            child: Icon(
+              NotificationStyles.avatarIcon(isRead),
+              color: Colors.white,
             ),
           ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF7B1FA2), Color(0xFF9C27B0), Color(0xFFBA68C8)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+          title: Text(
+            title,
+            style: NotificationStyles.notificationTitleStyle(isRead),
           ),
-        ),
-        child: RefreshIndicator(
-          onRefresh: _refreshNotifications,
-          color: Colors.white,
-          backgroundColor: Colors.purpleAccent,
-          child: notifications.isEmpty
-              ? ListView(
-                  children: const [
-                    SizedBox(height: 250),
-                    Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.inbox_rounded,
-                            color: Colors.white70,
-                            size: 60,
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            'You’re all caught up!',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.only(top: 100, bottom: 16),
-                  itemCount: notifications.length,
-                  itemBuilder: (context, index) {
-                    final item = notifications[index];
-                    final isRead = item['isRead'] as bool;
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Card(
-                        elevation: isRead ? 1 : 4,
-                        shadowColor: Colors.black26,
-                        color: isRead
-                            ? Colors.white.withOpacity(0.7)
-                            : Colors.white.withOpacity(0.95),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          leading: CircleAvatar(
-                            radius: 25,
-                            backgroundColor: isRead
-                                ? Colors.purple[200]
-                                : const Color(0xFF8E24AA),
-                            child: Icon(
-                              isRead
-                                  ? Icons.mark_email_read
-                                  : Icons.notifications_active,
-                              color: Colors.white,
-                            ),
-                          ),
-                          title: Text(
-                            item['title']!,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: isRead
-                                  ? Colors.grey[600]
-                                  : const Color(0xFF4A148C),
-                              decoration: isRead
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
-                          ),
-                          subtitle: Text(
-                            item['message']!,
-                            style: TextStyle(
-                              color: isRead ? Colors.grey[700] : Colors.black87,
-                              height: 1.3,
-                            ),
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(
-                              isRead
-                                  ? Icons.done_all
-                                  : Icons.check_circle_outline,
-                              color: isRead
-                                  ? Colors.grey
-                                  : const Color(0xFF7B1FA2),
-                            ),
-                            tooltip: 'Mark as read',
-                            onPressed: isRead ? null : () => _markAsRead(index),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+          subtitle: Text(
+            message,
+            style: NotificationStyles.notificationSubtitleStyle(isRead),
+          ),
+          trailing: IconButton(
+            icon: Icon(
+              NotificationStyles.trailingIcon(isRead),
+              color: NotificationStyles.trailingIconColor(isRead),
+            ),
+            tooltip: 'Mark as read',
+            onPressed: isRead ? null : onMarkAsRead,
+          ),
         ),
       ),
     );

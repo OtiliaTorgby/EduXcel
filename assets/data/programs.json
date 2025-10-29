@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Mobile App Development",
+    "description": "Learn to build Android and iOS apps using Flutter and Firebase.",
+    "chapters": 8,
+    "instructor": "John Doe"
+  },
+  {
+    "title": "Web Development Fundamentals",
+    "description": "Master HTML, CSS, and JavaScript for modern, responsive websites.",
+    "chapters": 6,
+    "instructor": "Jane Smith"
+  },
+  {
+    "title": "Database Systems",
+    "description": "Understand SQL, relational models, and how to build efficient databases.",
+    "chapters": 10,
+    "instructor": "Dr. Brown"
+  }
+]
