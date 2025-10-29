@@ -4,6 +4,11 @@
 
 ---
 
+## 🎥 Demo Video
+https://github.com/user-attachments/assets/f2ac9dd1-40c6-4a0e-9485-d8be73b745da
+
+---
+
 ## 🚀 Overview
 EduXcel bridges the gap between **learning** and **management**.  
 Learners can explore programs, track their progress, and submit feedback, while admins manage courses and monitor user activity.
@@ -98,9 +103,6 @@ Learners can explore programs, track their progress, and submit feedback, while 
 *(To be added once finalized)*
 
 ---
-
-## 🎥 Demo Video
-https://github.com/user-attachments/assets/f2ac9dd1-40c6-4a0e-9485-d8be73b745da
 
 
 ---
