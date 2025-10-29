@@ -17,7 +17,7 @@ class Course {
 class DetailsPage extends StatelessWidget {
   final Course course;
 
-  const DetailsPage({Key? key, required this.course}) : super(key: key);
+  const DetailsPage({super.key, required this.course});
 
   @override
   Widget build(BuildContext context) {
@@ -81,19 +81,19 @@ class DetailsPage extends StatelessWidget {
                     SnackBar(content: Text('Enrolling in ${course.title}...')),
                   );
                 },
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Text(
-                    'Enroll Now',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF673AB7),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                   elevation: 5,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Text(
+                    'Enroll Now',
+                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  ),
                 ),
               ),
             ),

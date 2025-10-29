@@ -4,15 +4,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:async';
 
-// Import the screens you are navigating to, adjust paths as necessary for your project structure
-// NOTE: I've had to make assumptions about your relative import paths:
-// 'package:eduxcel/screens/feedbackScreen.dart' -> '../screens/feedbackScreen.dart'
-// 'screens/profile_screen.dart' -> '../screens/profile_screen.dart' (or correct path)
+// Import screens and router
+import 'sign_in_screen.dart';
+import 'role_based_router.dart'; // 👈 NEW IMPORT
+
+// UI imports for the StudentHomePage part
 import '../screens/feedbackScreen.dart';
 import '../screens/notifications_page.dart';
 import '../screens/profile_screen.dart';
 import '../screens/program_list_screen.dart';
-import 'sign_in_screen.dart'; // Ensure this is still the correct path
+
+// =========================================================================
+// 🔑 AUTHENTICATION WRAPPER (Handles login state and routes to RoleChecker)
+// =========================================================================
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,8 +32,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-
-    // Set up the listener for Firebase Auth state changes
     _authStateSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
       if (mounted) {
         setState(() {
@@ -41,7 +43,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    // Cancel the subscription to prevent memory leaks
     _authStateSubscription.cancel();
     super.dispose();
   }
@@ -57,12 +58,34 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Helper method for the new card structure
+  @override
+  Widget build(BuildContext context) {
+    if (_user == null) {
+      // 1. Not logged in: show sign-in screen
+      return const SignInScreen();
+    } else {
+      // 2. Logged in: Route to the Role Checker
+      return RoleBasedRouter(user: _user!);
+    }
+  }
+}
+
+
+// =========================================================================
+// 🏠 STUDENT DASHBOARD UI (Accepts User object)
+// =========================================================================
+
+class StudentHomePage extends StatelessWidget {
+  // 👈 REQUIRED USER OBJECT
+  final User user;
+  const StudentHomePage({super.key, required this.user});
+
   Widget _buildHomeCard(BuildContext context,
       {required String title,
         required IconData icon,
         required Color color,
         required VoidCallback onTap}) {
+    // ... (Your existing _buildHomeCard implementation)
     return GestureDetector(
       onTap: onTap,
       child: Card(
@@ -92,141 +115,140 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Authentication Check
-    if (_user == null) {
-      return const SignInScreen();
-    } else {
-      // 2. New StudentHomePage UI
-      return Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          title: const Text(
-            'EduXcel Dashboard',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
+    // Use the passed 'user' object for display name and sign out logic
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: const Text(
+          'EduXcel Dashboard',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
           ),
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white, size: 28),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.account_circle, color: Colors.white, size: 28),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            );
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.white),
             onPressed: () {
-              // Navigate to Profile using MaterialPageRoute
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                MaterialPageRoute(builder: (context) => const NotificationsPage()),
               );
             },
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications, color: Colors.white),
-              onPressed: () {
-                // Navigate to Notifications using MaterialPageRoute
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const NotificationsPage()),
-                );
-              },
-              tooltip: 'Notifications',
-            ),
-            // Add the Sign Out button to the actions list
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: _signOut,
-              tooltip: 'Sign Out',
-            ),
-          ],
-        ),
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF7B1FA2), Color(0xFF9C27B0), Color(0xFFBA68C8)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+          // We need a way to sign out from the StudentHomePage,
+          // but _signOut is in the State object of HomePage.
+          // For simplicity here, we'll keep the navigation, but in a real app,
+          // you'd pass a sign-out callback or use a Provider/Bloc.
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () async {
+              // Note: This sign-out relies on the fact that HomePage
+              // is still in the widget tree and will rebuild on auth state change.
+              await FirebaseAuth.instance.signOut();
+              await GoogleSignIn().signOut();
+            },
+            tooltip: 'Sign Out',
           ),
-          child: Padding(
-            padding: const EdgeInsets.only(top: 120, left: 20, right: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  // Use the authenticated user's display name or email for a personalized welcome
-                  "Welcome Back, ${_user!.displayName ?? _user!.email!.split('@')[0]} 👋",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  "Continue learning with EduXcel",
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                const SizedBox(height: 30),
-                Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 18,
-                    mainAxisSpacing: 18,
-                    children: [
-                      _buildHomeCard(
-                        context,
-                        title: "My Courses",
-                        icon: Icons.school,
-                        color: Colors.deepPurple.shade400,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const ProgramListScreen()),
-                        ),
-                      ),
-                      _buildHomeCard(
-                        context,
-                        title: "Profile",
-                        icon: Icons.person,
-                        color: Colors.purple.shade600,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const ProfileScreen()),
-                        ),
-                      ),
-                      _buildHomeCard(
-                        context,
-                        title: "Notifications",
-                        icon: Icons.notifications_active,
-                        color: Colors.purple.shade700,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const NotificationsPage()),
-                        ),
-                      ),
-                      _buildHomeCard(
-                        context,
-                        title: "Feedback",
-                        icon: Icons.feedback_rounded,
-                        color: Colors.deepPurple.shade600,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const FeedbackPage()),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+        ],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF7B1FA2), Color(0xFF9C27B0), Color(0xFFBA68C8)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
-      );
-    }
+        child: Padding(
+          padding: const EdgeInsets.only(top: 120, left: 20, right: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Welcome Back, ${user.displayName ?? user.email!.split('@')[0]} 👋",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "Continue learning with EduXcel",
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              const SizedBox(height: 30),
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 18,
+                  mainAxisSpacing: 18,
+                  children: [
+                    _buildHomeCard(
+                      context,
+                      title: "My Courses",
+                      icon: Icons.school,
+                      color: Colors.deepPurple.shade400,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const ProgramListScreen()),
+                      ),
+                    ),
+                    _buildHomeCard(
+                      context,
+                      title: "Profile",
+                      icon: Icons.person,
+                      color: Colors.purple.shade600,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const ProfileScreen()),
+                      ),
+                    ),
+                    _buildHomeCard(
+                      context,
+                      title: "Notifications",
+                      icon: Icons.notifications_active,
+                      color: Colors.purple.shade700,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const NotificationsPage()),
+                      ),
+                    ),
+                    _buildHomeCard(
+                      context,
+                      title: "Feedback",
+                      icon: Icons.feedback_rounded,
+                      color: Colors.deepPurple.shade600,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const FeedbackPage()),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
