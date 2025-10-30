@@ -9,10 +9,10 @@ import 'firebase_options.dart';
 
 // Screens
 import 'sign_in_screen.dart';
-import 'home_page.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications_page.dart';
 import 'complete_profile_screen.dart';
+import 'home_page.dart';
 
 void main() async {
   // Ensure Flutter and Firebase are initialized before the app starts
@@ -59,7 +59,7 @@ class MyApp extends StatelessWidget {
 
         // Define explicit routes for navigation
         '/sign-in': (context) => const SignInScreen(), // Explicit sign-in route
-        '/home': (context) => const HomePage(),
+        '/home': (context) => HomePage(),
         '/profile': (context) => const ProfileScreen(),
         '/notifications': (context) => const NotificationsPage(),
 
@@ -94,7 +94,7 @@ class AuthWrapper extends StatelessWidget {
 
         if (user != null) {
           // If the user is signed in, send them to the main dashboard
-          return const HomePage();
+          return HomePage();
         } else {
           // If the user is NOT signed in, send them to the sign-in screen
           return const SignInScreen();
