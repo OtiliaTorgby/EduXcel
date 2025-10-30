@@ -1,15 +1,18 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Required for AuthWrapper
-import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:device_preview/device_preview.dart'; // 1. NEW: Import the package
+
+import 'firebase_options.dart';
 
 // Screens
 import 'sign_in_screen.dart';
 import 'home_page.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications_page.dart';
-import 'complete_profile_screen.dart'; // <-- 1. Import Added (if missing)
+import 'complete_profile_screen.dart';
 
 void main() async {
   // Ensure Flutter and Firebase are initialized before the app starts
@@ -17,7 +20,15 @@ void main() async {
   await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(const MyApp());
+  // 2. Wrap the runApp with DevicePreview
+  runApp(
+    DevicePreview(
+      // Set to false when ready for production or specific platform builds
+      enabled: true,
+      // The builder function takes the context and returns your root widget (MyApp)
+      builder: (context) => const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -27,6 +38,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EduXcel Firebase App',
+      // 3. Configure MaterialApp to use DevicePreview settings
+      useInheritedMediaQuery: true,
+      locale: DevicePreview.locale(context), // Apply device locale settings
+      builder: DevicePreview.appBuilder,      // Apply device framing and accessibility features
+
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF9C27B0),
@@ -47,7 +63,6 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfileScreen(),
         '/notifications': (context) => const NotificationsPage(),
 
-        // FIX: The missing route definition for Google sign-ups!
         '/complete-profile': (context) => const CompleteProfileScreen(),
       },
       // Fallback route handler (optional, but good practice)
