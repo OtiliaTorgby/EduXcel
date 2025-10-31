@@ -62,7 +62,11 @@ class MyApp extends StatelessWidget {
         '/sign-in': (context) => const SignInScreen(), // Explicit sign-in route
         '/home': (context) => HomePage(),
         '/profile': (context) => const ProfileScreen(),
-        '/notifications': (context) => const NotificationsPage(role: 'student',),
+        '/notifications': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as String?;
+          final role = args ?? 'student'; // default to student if no argument
+          return NotificationsPage(role: role);
+        },
 
         '/complete-profile': (context) => const CompleteProfileScreen(),
       },
