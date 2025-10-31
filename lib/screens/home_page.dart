@@ -9,14 +9,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:async';
 
 // Import screens and router
-import 'sign_in_screen.dart';
-import 'role_based_router.dart';
+import '../sign_in_screen.dart';
+import '../role_based_router.dart';
 
 // UI imports for the StudentHomePage part
-import '../screens/feedbackScreen.dart';
-import '../screens/notifications_page.dart';
-import '../screens/profile_screen.dart';
-import '../screens/program_list_screen.dart';
+import '../../screens/feedbackScreen.dart';
+import '../../screens/notifications_page.dart';
+import '../../screens/profile_screen.dart';
+import 'students/program_list_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -199,7 +199,7 @@ class StudentHomePage extends StatelessWidget {
                       Row(
                         children: [
                           IconButton(
-                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage())),
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage(role: 'student'))),
                             icon: const Icon(Icons.notifications_none, color: Colors.white),
                           ),
                           IconButton(
@@ -290,7 +290,7 @@ class StudentHomePage extends StatelessWidget {
                         title: 'Notifications',
                         subtitle: 'See the latest announcements and messages',
                         icon: Icons.campaign,
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage())),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage(role:'student'))),
                       ),
 
                       // Promotional / info card

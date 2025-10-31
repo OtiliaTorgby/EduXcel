@@ -1,46 +1,43 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({super.key});
+  final String role; // "admin" or "student"
+  const NotificationsPage({required this.role, Key? key}) : super(key: key);
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
-  List<Map<String, dynamic>> notifications = [
-    {
-      'title': 'New Course Available',
-      'message': '“Mobile App Development” has been added to your program list.',
-      'time': '2 hours ago',
-      'isRead': false,
-    },
-    {
-      'title': 'Assignment Reminder',
-      'message': 'Your “Database Systems” assignment is due tomorrow.',
-      'time': '5 hours ago',
-      'isRead': false,
-    },
-    {
-      'title': 'Course Update',
-      'message': '“Web Development Fundamentals” materials have been updated.',
-      'time': '1 day ago',
-      'isRead': false,
-    },
-  ];
+  List<Map<String, dynamic>> notifications = [];
 
-  /// Simulate a refresh (you can later replace this with a backend call)
-  Future<void> _refreshNotifications() async {
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      notifications.insert(0, {
-        'title': 'New Announcement',
-        'message': '“UI/UX Design” workshop is happening tomorrow!',
-        'time': 'Just now',
-        'isRead': false,
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    try {
+      final filePath = widget.role == 'admin'
+          ? 'assets/data/admin_notifications.json'
+          : 'assets/data/student_notifications.json';
+
+      final jsonString = await rootBundle.loadString(filePath);
+      final List<dynamic> data = json.decode(jsonString);
+
+      setState(() {
+        notifications = data.cast<Map<String, dynamic>>();
       });
-    });
+    } catch (e) {
+      debugPrint('Error loading notifications: $e');
+    }
+  }
 
+  Future<void> _refreshNotifications() async {
+    await _loadNotifications();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Notifications updated')),
     );
@@ -60,20 +57,101 @@ class _NotificationsPageState extends State<NotificationsPage> {
     });
   }
 
+  // Admin: push notification dialog
+  void _showPushNotificationDialog() {
+    String title = '';
+    String message = '';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Push Notification to Students'),
+          content: SingleChildScrollView(
+            child: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Title'),
+                    onChanged: (val) => title = val,
+                  ),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Message'),
+                    maxLines: 3,
+                    onChanged: (val) => message = val,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (title.isNotEmpty && message.isNotEmpty) {
+                  setState(() {
+                    notifications.insert(0, {
+                      'title': title,
+                      'message': message,
+                      'time': 'Just now',
+                      'isRead': false,
+                    });
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Notification pushed to students!'),
+                    ),
+                  );
+
+                  Navigator.pop(ctx);
+
+                  // In a real app, send the notification to backend here
+                }
+              },
+              child: const Text('Push'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF7B1FA2),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: false,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: widget.role == 'admin'
+          ? FloatingActionButton.extended(
+        onPressed: _showPushNotificationDialog,
+        icon: const Icon(Icons.send),
+        label: const Text('Push Notification'),
+        backgroundColor: const Color(0xFF7B1FA2),
+        foregroundColor: Colors.white,
+      )
+          : null,
       appBar: AppBar(
         centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        title: const Text(
-          'Notifications',
-          style: TextStyle(
+        elevation: 2,
+        backgroundColor: const Color(0xFFEDE7F6),
+        title: Text(
+          widget.role == 'admin'
+              ? 'Notifications Admin'
+              : 'Notifications Student',
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 22,
-            color: Colors.white,
+            color: Color(0xFF4A148C),
             letterSpacing: 0.5,
           ),
         ),
@@ -82,7 +160,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             onPressed: _markAllAsRead,
             child: const Text(
               'Mark all as read',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Color(0xFF7B1FA2), fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -90,15 +168,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF7B1FA2), Color(0xFF9C27B0), Color(0xFFBA68C8)],
+            colors: [
+              Color(0xFFEDE7F6), // Light purple
+              Color(0xFFF3E5F5), // Very light
+              Color(0xFFF8BBD0), // pastel pink
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
         child: RefreshIndicator(
           onRefresh: _refreshNotifications,
-          color: Colors.white,
-          backgroundColor: Colors.purpleAccent,
+          color: Color(0xFF7B1FA2),
+          backgroundColor: Colors.white,
           child: notifications.isEmpty
               ? ListView(
             children: const [
@@ -107,12 +189,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 child: Column(
                   children: [
                     Icon(Icons.inbox_rounded,
-                        color: Colors.white70, size: 60),
-                    SizedBox(height: 10),
+                        color: Color(0xFF7B1FA2), size: 60),
+                    SizedBox(height: 14),
                     Text(
                       'You’re all caught up!',
-                      style:
-                      TextStyle(color: Colors.white70, fontSize: 16),
+                      style: TextStyle(
+                          color: Color(0xFF7B1FA2),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -131,21 +215,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     horizontal: 16, vertical: 8),
                 child: Card(
                   elevation: isRead ? 1 : 4,
-                  shadowColor: Colors.black26,
+                  shadowColor: Colors.deepPurple,
                   color: isRead
                       ? Colors.white.withOpacity(0.7)
-                      : Colors.white.withOpacity(0.95),
+                      : const Color(0xFFF3E5F5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                        horizontal: 16, vertical: 13),
                     leading: CircleAvatar(
                       radius: 25,
                       backgroundColor: isRead
                           ? Colors.purple[200]
-                          : const Color(0xFF8E24AA),
+                          : const Color(0xFF7B1FA2),
                       child: Icon(
                         isRead
                             ? Icons.mark_email_read
@@ -154,18 +238,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       ),
                     ),
                     title: Text(
-                      item['title']!,
+                      item['title'] ?? '',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: isRead
                             ? Colors.grey[600]
-                            : const Color(0xFF4A148C),
+                            : Color(0xFF4A148C),
                         decoration:
                         isRead ? TextDecoration.lineThrough : null,
                       ),
                     ),
                     subtitle: Text(
-                      item['message']!,
+                      item['message'] ?? '',
                       style: TextStyle(
                         color: isRead ? Colors.grey[700] : Colors.black87,
                         height: 1.3,
@@ -178,7 +262,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             : Icons.check_circle_outline,
                         color: isRead
                             ? Colors.grey
-                            : const Color(0xFF7B1FA2),
+                            : Color(0xFF7B1FA2),
                       ),
                       tooltip: 'Mark as read',
                       onPressed:

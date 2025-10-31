@@ -1,0 +1,14 @@
+[
+  {
+    "title": "New Student Registered",
+    "message": "A new student has enrolled in the IT program.",
+    "time": "1 hour ago",
+    "isRead": false
+  },
+  {
+    "title": "Report Submitted",
+    "message": "Monthly analytics report has been submitted successfully.",
+    "time": "3 hours ago",
+    "isRead": false
+  }
+]

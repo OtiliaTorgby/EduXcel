@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'admin_page.dart';
-import 'home_page.dart'; // Contains StudentHomePage logic
+import 'screens/admins/admin_page.dart';
+import 'screens/home_page.dart'; // Contains StudentHomePage logic
 
 // Base collection path
 const String _baseCollectionPath = 'artifacts/eduxcel/users';

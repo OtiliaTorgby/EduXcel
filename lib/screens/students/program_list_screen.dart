@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../screens/details.dart';
+import '../details.dart';
 
 class ProgramListScreen extends StatefulWidget {
   const ProgramListScreen({super.key});
