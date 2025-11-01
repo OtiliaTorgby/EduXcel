@@ -12,7 +12,9 @@ class ProgramListScreen extends StatefulWidget {
 
 class _ProgramListScreenState extends State<ProgramListScreen> {
   List<dynamic> programs = [];
+  List<dynamic> filteredPrograms = [];
   bool isLoading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -20,16 +22,19 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
     _loadPrograms();
   }
 
-  /// Load mock program data from JSON file
   Future<void> _loadPrograms() async {
     try {
-      final String response = await rootBundle.loadString('assets/data/programs.json');
+      final String response =
+      await rootBundle.loadString('assets/data/programs.json');
       final data = json.decode(response);
+      if (!mounted) return;
       setState(() {
-        programs = data;
+        programs = List<dynamic>.from(data);
+        _applyFilter();
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -40,111 +45,352 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
     }
   }
 
-
-  /// Simulate refresh to mimic API
   Future<void> _refreshPrograms() async {
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 700));
     await _loadPrograms();
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Programs updated!')),
     );
   }
 
+  void _applyFilter() {
+    if (_searchQuery.trim().isEmpty) {
+      filteredPrograms = List<dynamic>.from(programs);
+    } else {
+      final q = _searchQuery.toLowerCase();
+      filteredPrograms = programs.where((p) {
+        final title = (p['title'] ?? '').toString().toLowerCase();
+        final desc = (p['description'] ?? '').toString().toLowerCase();
+        final instr = (p['instructor'] ?? '').toString().toLowerCase();
+        return title.contains(q) || desc.contains(q) || instr.contains(q);
+      }).toList();
+    }
+  }
+
+  void _onSearchChanged(String v) {
+    setState(() {
+      _searchQuery = v;
+      _applyFilter();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // standalone gradient/colors used only inside this file
+    const headerGradient = LinearGradient(
+      colors: [Color(0xFF6A1B9A), Color(0xFF8E24AA), Color(0xFFAB47BC)],
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+    );
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        elevation: 0,
         backgroundColor: Colors.transparent,
+        elevation: 0,
         centerTitle: true,
         title: const Text(
-          "Available Programs",
+          'Available Programs',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
+            letterSpacing: 0.4,
           ),
         ),
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF7B1FA2), Color(0xFF9C27B0), Color(0xFFBA68C8)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: isLoading
-            ? const Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        )
-            : RefreshIndicator(
-          onRefresh: _refreshPrograms,
-          color: Colors.white,
-          backgroundColor: Colors.purpleAccent,
-          child: ListView.builder(
-            padding: const EdgeInsets.only(top: 100, bottom: 20),
-            itemCount: programs.length,
-            itemBuilder: (context, index) {
-              final program = programs[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 8),
-                child: Card(
-                  color: Colors.white.withOpacity(0.9),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  elevation: 4,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: const Color(0xFF8E24AA),
-                      child: Text(
-                        program['title'][0],
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 20),
+        decoration: const BoxDecoration(gradient: headerGradient),
+        child: SafeArea(
+          bottom: true,
+          child: Column(
+            children: [
+              // top decorative panel (makes appbar feel like a header)
+              Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    // subtle header card
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Colors.white.withOpacity(0.08)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.school, color: Colors.white70),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'Learn. Build. Ship.',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 14),
+                              ),
+                            ),
+                            // simple stats or count
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white24,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${programs.length}',
+                                style: const TextStyle(
+                                    color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    title: Text(
-                      program['title'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF4A148C),
-                      ),
-                    ),
-                    subtitle: Text(
-                      program['description'],
-                      style: const TextStyle(color: Colors.black87),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.arrow_forward_ios_rounded,
-                          color: Color(0xFF7B1FA2)),
-                      onPressed: () {
-                        final course = Course(
-                          title: program['title'],
-                          description: program['description'],
-                          chapters: program['chapters'] ?? 10, // fallback value
-                          instructor: program['instructor'] ?? "Unknown Instructor",
-                        );
+                  ],
+                ),
+              ),
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => DetailsPage(course: course),
+              // Search bar (local filter)
+              Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Material(
+                  color: Colors.white.withOpacity(0.92),
+                  elevation: 2,
+                  borderRadius: BorderRadius.circular(12),
+                  child: TextField(
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search programs, instructors, descriptions',
+                      hintStyle: TextStyle(color: Colors.grey.shade700),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF6A1B9A)),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                        icon: const Icon(Icons.clear, color: Color(0xFF6A1B9A)),
+                        onPressed: () => _onSearchChanged(''),
+                      )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 14),
+                    ),
+                    style: const TextStyle(color: Colors.black87),
+                  ),
+                ),
+              ),
+
+              // body area: pale container with rounded top
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8F6FB),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(22),
+                      topRight: Radius.circular(22),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : RefreshIndicator(
+                    onRefresh: _refreshPrograms,
+                    color: const Color(0xFF6A1B9A),
+                    backgroundColor: Colors.white,
+                    child: filteredPrograms.isEmpty
+                        ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        const SizedBox(height: 40),
+                        Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.search_off,
+                                  size: 64,
+                                  color: Colors.grey.shade400),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No programs found',
+                                style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                        : ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 18),
+                      itemCount: filteredPrograms.length,
+                      itemBuilder: (context, index) {
+                        final program = filteredPrograms[index];
+                        final title =
+                        (program['title'] ?? 'Untitled')
+                            .toString();
+                        final description =
+                        (program['description'] ?? '')
+                            .toString();
+                        final instructor = (program['instructor'] ??
+                            'Unknown Instructor')
+                            .toString();
+                        final chapters = program['chapters'] ?? 0;
+                        final avatarTag = 'avatar_$index';
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8.0),
+                          child: InkWell(
+                            borderRadius:
+                            BorderRadius.circular(14),
+                            onTap: () {
+                              final course = Course(
+                                title: title,
+                                description: description,
+                                chapters: chapters,
+                                instructor: instructor,
+                              );
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      DetailsPage(course: course),
+                                ),
+                              );
+                            },
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(14),
+                              ),
+                              elevation: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                                  children: [
+                                    // Hero avatar for a subtle transition
+                                    Hero(
+                                      tag: avatarTag,
+                                      child: CircleAvatar(
+                                        radius: 28,
+                                        backgroundColor:
+                                        const Color(0xFF8E24AA),
+                                        child: Text(
+                                          title.isNotEmpty
+                                              ? title[0]
+                                              : '?',
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 20),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  title,
+                                                  style:
+                                                  const TextStyle(
+                                                    fontWeight:
+                                                    FontWeight
+                                                        .w700,
+                                                    fontSize: 15,
+                                                    color: Color(
+                                                        0xFF4A148C),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                const EdgeInsets
+                                                    .symmetric(
+                                                    horizontal:
+                                                    8,
+                                                    vertical: 6),
+                                                decoration:
+                                                BoxDecoration(
+                                                  color: Colors
+                                                      .purpleAccent
+                                                      .withOpacity(
+                                                      0.12),
+                                                  borderRadius:
+                                                  BorderRadius
+                                                      .circular(
+                                                      10),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.book,
+                                                        size: 14,
+                                                        color: Color(
+                                                            0xFF6A1B9A)),
+                                                    const SizedBox(
+                                                        width: 6),
+                                                    Text(
+                                                      '$chapters',
+                                                      style: const TextStyle(
+                                                          fontSize: 12,
+                                                          color: Color(
+                                                              0xFF6A1B9A)),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            instructor,
+                                            style: TextStyle(
+                                                color: Colors
+                                                    .grey.shade700,
+                                                fontSize: 13),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            description,
+                                            maxLines: 2,
+                                            overflow:
+                                            TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                                color:
+                                                Colors.grey.shade800,
+                                                fontSize: 13),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         );
                       },
-
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 }
-
