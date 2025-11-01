@@ -1,8 +1,3 @@
-// home_page_redesign.dart
-// Redesigned HomePage + StudentHomePage (no 2x2 grid)
-// - Vertical scroll with hero header, horizontal feature chips, and large action cards
-// - Keeps authentication wrapper and RoleBasedRouter integration
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -11,6 +6,7 @@ import 'dart:async';
 // Import screens and router
 import '../sign_in_screen.dart';
 import '../role_based_router.dart';
+import 'package:eduxcel/profile_check_router.dart';
 
 // UI imports for the StudentHomePage part
 import '../../screens/feedbackScreen.dart';
@@ -63,18 +59,14 @@ class _HomePageState extends State<HomePage> {
     if (_user == null) {
       return const SignInScreen();
     } else {
-      return RoleBasedRouter(user: _user!);
+      // Use the ProfileCheckRouter as the next step after successful login
+      return ProfileCheckRouter(user: _user!);
     }
   }
 }
 
 // --------------------------------------------------------------
 // Redesigned StudentHomePage
-// - Large hero header with avatar and greeting
-// - Search bar
-// - Horizontal feature carousel (quick-access)
-// - Vertical list of large action cards (easy to tap)
-// - Floating action button for quick start
 // --------------------------------------------------------------
 
 class StudentHomePage extends StatelessWidget {
@@ -95,7 +87,7 @@ class StudentHomePage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
+          color: Colors.white.withOpacity(0.15), // Slightly increased opacity for better visibility
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -111,9 +103,15 @@ class StudentHomePage extends StatelessWidget {
 
   Widget _actionCard(BuildContext context,
       {required String title, required String subtitle, required IconData icon, required VoidCallback onTap}) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 6,
+      // Themed Border
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: primaryColor.withOpacity(0.15), width: 1.5),
+      ),
+      elevation: 2, // Reduced elevation for a modern look
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -124,8 +122,9 @@ class StudentHomePage extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
-                child: Icon(icon, size: 28, color: Theme.of(context).colorScheme.primary),
+                // Themed CircleAvatar background
+                backgroundColor: primaryColor.withOpacity(0.1),
+                child: Icon(icon, size: 28, color: primaryColor), // Themed Icon color
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -149,24 +148,27 @@ class StudentHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = _displayName();
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final secondaryColor = Theme.of(context).colorScheme.secondary;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F7FB),
+      backgroundColor: Colors.white, // Changed from light gray to pure white for better contrast
       body: SafeArea(
         child: Column(
           children: [
-            // Hero header
+            // Hero header (Deeper Gradient)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6A1B9A), Color(0xFF8E24AA)],
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  // Deeper, richer violet gradient
+                  colors: [Color(0xFF4A148C), Color(0xFF7B1FA2)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(28),
-                  bottomRight: Radius.circular(28),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(32), // Increased curve
+                  bottomRight: Radius.circular(32), // Increased curve
                 ),
               ),
               child: Column(
@@ -214,13 +216,20 @@ class StudentHomePage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Search Bar
+                  // Search Bar (Added subtle shadow for depth)
                   Container(
                     margin: const EdgeInsets.only(top: 6, bottom: 12),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 5,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: const [
@@ -268,7 +277,7 @@ class StudentHomePage extends StatelessWidget {
                       const Text('Quick Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
 
-                      // Large vertical action cards
+                      // Large vertical action cards (uses themed _actionCard)
                       _actionCard(
                         context,
                         title: 'My Courses',
@@ -293,11 +302,16 @@ class StudentHomePage extends StatelessWidget {
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage(role:'student'))),
                       ),
 
-                      // Promotional / info card
+                      // Promotional / info card (Thematic coloring applied)
                       Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        color: Colors.white,
-                        elevation: 4,
+                        // Themed border
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: primaryColor.withOpacity(0.3), width: 1.5),
+                        ),
+                        // Light purple background tint
+                        color: primaryColor.withOpacity(0.03),
+                        elevation: 2,
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Row(
@@ -305,16 +319,21 @@ class StudentHomePage extends StatelessWidget {
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text('New Program: Design Thinking', style: TextStyle(fontWeight: FontWeight.bold)),
-                                    SizedBox(height: 6),
-                                    Text('Enroll now to learn practical problem solving techniques and projects.', style: TextStyle(color: Colors.black54)),
+                                  children: [
+                                    const Text('New Program: Design Thinking', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                                    const SizedBox(height: 6),
+                                    Text('Enroll now to learn practical problem solving techniques and projects.', style: TextStyle(color: secondaryColor)),
                                   ],
                                 ),
                               ),
                               ElevatedButton(
                                 onPressed: () {},
-                                style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                style: ElevatedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  // Themed button color
+                                  backgroundColor: primaryColor,
+                                  foregroundColor: Colors.white,
+                                ),
                                 child: const Text('Explore'),
                               )
                             ],
@@ -357,8 +376,10 @@ class StudentHomePage extends StatelessWidget {
 
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen())),
-        label: const Text('Start Learning'),
-        icon: const Icon(Icons.play_arrow),
+        // Themed FAB
+        backgroundColor: primaryColor,
+        label: const Text('Start Learning', style: TextStyle(color: Colors.white)),
+        icon: const Icon(Icons.play_arrow, color: Colors.white),
       ),
     );
   }
