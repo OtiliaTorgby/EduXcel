@@ -1,11 +1,10 @@
-// role_based_router.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/admins/admin_page.dart';
 import 'screens/home_page.dart'; // Contains StudentHomePage logic
 
-// Base collection path
+// Base collection path (artifacts/eduxcel/users)
 const String _baseCollectionPath = 'artifacts/eduxcel/users';
 
 class RoleBasedRouter extends StatelessWidget {
@@ -14,13 +13,12 @@ class RoleBasedRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🚨 We are now specifically targeting the document in the 'profiles' subcollection.
+    // 1. Correctly target the user's document directly in the 'users' collection.
+    // Path: artifacts/eduxcel/users/{user.uid}
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection(_baseCollectionPath)
-          .doc(user.uid)
-          .collection('profiles') // 👈 Step into the subcollection
-          .doc(user.uid)           // 👈 Target the document with the UID
+          .doc(user.uid) // 👈 CORRECT: Document is directly here.
           .snapshots(),
       builder: (context, snapshot) {
 
@@ -41,6 +39,7 @@ class RoleBasedRouter extends StatelessWidget {
         }
 
         // 3. Data Available
+        // The snapshot.data!.exists check implicitly handles cases where the document is missing
         if (snapshot.hasData && snapshot.data!.exists) {
           final data = snapshot.data!.data() as Map<String, dynamic>;
           // Ensure the role is read correctly, defaulting if it's missing
@@ -58,7 +57,8 @@ class RoleBasedRouter extends StatelessWidget {
           }
         }
 
-        // 4. Document does not exist (This means the profile document hasn't been created yet)
+        // 4. Document does not exist (e.g., first login before the CompleteProfileScreen could write the data,
+        // though this should be caught by ProfileCheckRouter earlier).
         // Default to the Student Page as a safe fallback.
         debugPrint('Profile document not found. Defaulting to Student.');
         return StudentHomePage(user: user);

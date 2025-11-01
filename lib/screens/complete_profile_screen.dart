@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Global variables provided by the canvas environment or defined globally if needed.
-// This is used for structuring your Firestore data in a multi-app scenario.
+// Global app ID variable
 const String __app_id = 'eduxcel';
-// firebaseConfig is generally handled by Firebase.initializeApp() and flutterfire config,
-// so it's not directly used in the widget itself usually.
-// final Map<String, dynamic> firebaseConfig = {}; // Keep if you use it elsewhere.
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -33,7 +29,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   }
 
   void _showError(String message) {
-    if (!mounted) return; // Ensure the widget is still in the tree
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -44,9 +40,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) {
-      return; // Stop if form validation fails
+      return;
     }
-    _formKey.currentState!.save(); // Save form fields to variables
+    _formKey.currentState!.save();
 
     if (_dateOfBirth == null) {
       _showError('Please select your Date of Birth.');
@@ -54,7 +50,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     }
 
     setState(() {
-      _isLoading = true; // Show loading indicator
+      _isLoading = true;
     });
 
     try {
@@ -64,51 +60,47 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         return;
       }
 
-      // 1. Update Display Name in Firebase Auth (if it changed or was empty)
-      // Only update if the current Auth display name is different from the form,
-      // or if the Auth display name was initially null/empty and we now have one.
-      if (_displayName != null &&
-          (user.displayName != _displayName!.trim() || user.displayName == null || user.displayName!.isEmpty)) {
+      // 1. Update Display Name in Firebase Auth (if necessary)
+      if (_displayName != null && _displayName!.trim().isNotEmpty && user.displayName != _displayName!.trim()) {
         await user.updateDisplayName(_displayName!.trim());
       }
 
-      // 2. Save extended profile data (DoB, role, and completion status) to Firestore
-      // Using a streamlined Firestore path:
+      // 2. Save extended profile data to Firestore
       final userProfileDocRef = _firestore
-          .collection('artifacts') // Top-level collection for your app's data
-          .doc(__app_id)           // Document for this specific application instance
-          .collection('users')    // Subcollection for all user profiles
-          .doc(user.uid);         // Document for the specific user, using their Firebase Auth UID
+          .collection('artifacts')
+          .doc(__app_id)
+          .collection('users')
+          .doc(user.uid);
 
       final profileData = {
         'displayName': _displayName!.trim(),
-        'email': user.email, // Include email for easy reference/querying
-        'dateOfBirth': _dateOfBirth!.toIso8601String(), // ISO 8601 for consistent date storage
+        'email': user.email,
+        // Using ISO 8601 String for consistency with what we chose for manual sign-up
+        'dateOfBirth': _dateOfBirth!.toIso8601String(),
         'role': 'Student', // Default role for EduXcel sign-ups
-        'createdAt': FieldValue.serverTimestamp(), // Timestamp for when the account was created
-        'completedAt': FieldValue.serverTimestamp(), // Timestamp for when the profile was completed
-        'profileComplete': true, // Crucial flag to indicate profile is fully set up
+        // --- CRITICAL ADDITIONS ---
+        'profileComplete': true, // SET FLAG TO TRUE
+        'completedAt': FieldValue.serverTimestamp(), // Track completion time
+        // -------------------------
       };
 
-      // Use set with merge: true to avoid overwriting existing data if any (e.g., createdAt from Cloud Function)
+      // Use merge: true to avoid overwriting fields like 'createdAt' or 'authMethod'
       await userProfileDocRef.set(profileData, SetOptions(merge: true));
 
       if (mounted) {
-        // Navigate to home after successful profile completion
-        // pushReplacementNamed prevents going back to the profile screen
-        Navigator.of(context).pushReplacementNamed('/home');
+        // Pop the screen. The ProfileCheckRouter below it will now rebuild,
+        // read 'profileComplete: true', and route the user to the RoleBasedRouter.
+        Navigator.of(context).pop();
       }
 
     } on FirebaseException catch (e) {
-      // Catch specific Firebase errors
       _showError('Error saving profile: ${e.message}');
     } catch (e) {
-      // Catch any other unexpected errors
       _showError('Operation failed: $e');
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false; // Hide loading indicator
+          _isLoading = false;
         });
       }
     }
@@ -119,13 +111,16 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Complete Your Profile'),
-        automaticallyImplyLeading: false, // Prevent going back to previous screens from here
+        // Use the primary color from the theme
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: false, // Must complete profile to proceed
       ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32.0),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400), // Max width for larger screens
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Form(
               key: _formKey,
               child: Column(
@@ -171,7 +166,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         labelText: 'Date of Birth',
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.calendar_today),
-                        // Clear button for date of birth
                         suffixIcon: _dateOfBirth != null
                             ? IconButton(
                           icon: const Icon(Icons.clear),
@@ -183,7 +177,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         )
                             : null,
                       ),
-                      readOnly: true, // Make the field non-editable by keyboard
+                      readOnly: true,
                       controller: TextEditingController(
                         text: _dateOfBirth == null
                             ? ''
@@ -192,9 +186,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       onTap: () async {
                         final date = await showDatePicker(
                           context: context,
-                          initialDate: _dateOfBirth ?? DateTime(2000), // Use selected date or a reasonable default
-                          firstDate: DateTime(1950), // Earliest selectable date
-                          lastDate: DateTime.now(), // Latest selectable date (today)
+                          initialDate: _dateOfBirth ?? DateTime(2000),
+                          firstDate: DateTime(1950),
+                          lastDate: DateTime.now(),
                         );
                         if (date != null) {
                           setState(() {
@@ -214,9 +208,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveProfile, // Disable button while loading
+                      onPressed: _isLoading ? null : _saveProfile,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF673AB7), // Purple color (Firebase primary)
+                        backgroundColor: Theme.of(context).colorScheme.primary, // Using theme primary color
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

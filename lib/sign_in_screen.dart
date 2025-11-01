@@ -85,8 +85,6 @@ class _SignInScreenState extends State<SignInScreen> {
         .doc(__app_id)
         .collection('users')
         .doc(uid)
-        .collection('profiles')
-        .doc(uid)
         .get();
   }
 
@@ -95,16 +93,17 @@ class _SignInScreenState extends State<SignInScreen> {
         .collection('artifacts')
         .doc(__app_id)
         .collection('users')
-        .doc(user.uid)
-        .collection('profiles')
         .doc(user.uid);
 
+    // --- UPDATED FOR MANUAL SIGN-UP ---
     final profileData = {
       'displayName': name,
       'email': user.email,
-      'dateOfBirth': dob.toIso8601String(), // Convert DateTime to String for storage
-      'role': role, // Default role is Student
+      'dateOfBirth': dob.toIso8601String(), // Stored as String
+      'role': role,
       'createdAt': FieldValue.serverTimestamp(),
+      'profileComplete': true, // Profile is complete at this point
+      'authMethod': 'manual', // <-- NEW FIELD
     };
 
     await docRef.set(profileData, SetOptions(merge: true));
@@ -151,6 +150,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
         await userCredential.user!.updateDisplayName(_displayName.trim());
 
+        // For manual sign-up, all required data is provided here, so we save the complete profile.
         await _saveProfileToFirestore(
           userCredential.user!,
           dob: _dateOfBirth!,
@@ -201,11 +201,37 @@ class _SignInScreenState extends State<SignInScreen> {
         idToken: googleAuth.idToken,
       );
 
-      await _auth.signInWithCredential(credential);
-      // NOTE: Authentication is complete.
-      // We no longer navigate manually here.
-      // The AuthWrapper in main.dart will automatically detect the state change
-      // and redirect the user to the correct screen (/home or /complete-profile).
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
+      final User user = userCredential.user!;
+
+      // -------------------------------------------------------------
+      // Logic: Ensure initial Firestore Profile exists for GSI
+      // -------------------------------------------------------------
+      final userDocRef = _firestore
+          .collection('artifacts')
+          .doc(__app_id)
+          .collection('users')
+          .doc(user.uid);
+
+      final docSnapshot = await userDocRef.get();
+
+      // If the document does NOT exist (first time sign-in via GSI), create it.
+      if (!docSnapshot.exists) {
+        // Minimal fields with profileComplete: false
+        final initialProfileData = {
+          'email': user.email,
+          'displayName': user.displayName ?? '',
+          'role': 'Student',
+          'createdAt': FieldValue.serverTimestamp(),
+          // This flag ensures the user is routed to CompleteProfileScreen
+          'profileComplete': false,
+          'authMethod': 'google', // <-- NEW FIELD
+        };
+
+        await userDocRef.set(initialProfileData);
+        print('Firestore document created for new Google user: ${user.uid}');
+      }
+      // -------------------------------------------------------------
 
     } on FirebaseAuthException catch (e) {
       _showError('Failed to sign in with Google: ${e.message}');
@@ -259,6 +285,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       // --- Sign Up Fields Only ---
                       if (!isSignIn) ...[
                         TextFormField(
+                          initialValue: _displayName,
                           decoration: const InputDecoration(
                             labelText: 'Full Name',
                             border: OutlineInputBorder(),
