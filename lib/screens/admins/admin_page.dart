@@ -264,19 +264,47 @@ class _AdminPageState extends State<AdminPage> {
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  _DashboardCard(title: 'Active Learners', icon: Icons.pie_chart),
-                  SizedBox(width: 14),
-                  _DashboardCard(title: 'Engagement', icon: Icons.bar_chart),
+                children: [
+                  _DashboardCard(
+                    title: 'Active Learners',
+                    icon: Icons.people,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LearnersPage()),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  _DashboardCard(
+                    title: 'Engagement',
+                    icon: Icons.bar_chart,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const StatsPage()),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  _DashboardCard(title: 'Active Programs', icon: Icons.insert_chart),
-                  SizedBox(width: 14),
-                  _DashboardCard(title: 'Rate of Completion', icon: Icons.show_chart),
+                children: [
+                  _DashboardCard(
+                    title: 'Active Programs',
+                    icon: Icons.list_alt,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProgramsPage()),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  _DashboardCard(
+                    title: 'Rate of Completion',
+                    icon: Icons.show_chart,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const StatsPage()),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 25),
@@ -320,34 +348,43 @@ class _AdminPageState extends State<AdminPage> {
 class _DashboardCard extends StatelessWidget {
   final String title;
   final IconData icon;
+  final VoidCallback? onTap;
 
-  const _DashboardCard({required this.title, required this.icon});
+  const _DashboardCard({
+    required this.title,
+    required this.icon,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Card(
-        elevation: 6,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        color: Colors.deepPurple.shade50,
-        child: Container(
-          height: 140,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 40, color: Colors.deepPurple.shade400),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.deepPurple,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Card(
+          elevation: 6,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          color: Colors.deepPurple.shade50,
+          child: Container(
+            height: 140,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 40, color: Colors.deepPurple.shade400),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.deepPurple,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

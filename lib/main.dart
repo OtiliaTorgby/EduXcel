@@ -99,7 +99,7 @@ class AuthWrapper extends StatelessWidget {
 
                 if (user != null) {
           // Check if the signed-in user is the admin
-          if (user.email == 'admin@eduxcel.com') {
+          if (user.email == 'admin@gmail.com') {
             return const AdminPage(); // <-- Admin route
           } else {
             return const HomePage(); // Normal user
