@@ -37,6 +37,7 @@ dependencies:
   google_sign_in: 6.3.0
   flutter_dotenv: ^6.0.0
   device_preview: 1.3.1
+  url_launcher: ^6.2.1
 
 
   cloud_firestore: 6.0.3
@@ -63,6 +64,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/google.png
+    - assets/youtube.png
+    - assets/github.png
     - .env
     - assets/data/
    # - images/a_dot_ham.jpeg
