@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:device_preview/device_preview.dart'; // 1. NEW: Import the package
+import 'package:device_preview/device_preview.dart';
 
 import 'firebase_options.dart';
 
@@ -99,13 +99,12 @@ class AuthWrapper extends StatelessWidget {
 
         final user = snapshot.data;
 
-                if (user != null) {
-          // Check if the signed-in user is the admin
-          if (user.email == 'admin@gmail.com') {
-            return const AdminPage(); // <-- Admin route
-          } else {
-            return const HomePage(); // Normal user
-          }
+        if (user != null) {
+          // ✅ FIX: Remove hardcoded check.
+          // Direct all authenticated users to HomePage.
+          // The HomePage widget will contain the logic (via ProfileCheckRouter)
+          // to route the user based on their Firestore 'role' and 'profileComplete' status.
+          return const HomePage();
         } else {
           return const SignInScreen(); // Not signed in
         }

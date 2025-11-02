@@ -95,12 +95,11 @@ class _SignInScreenState extends State<SignInScreen> {
         .collection('users')
         .doc(user.uid);
 
-    // --- UPDATED FOR MANUAL SIGN-UP ---
     final profileData = {
       'displayName': name,
       'email': user.email,
-      'dateOfBirth': dob.toIso8601String(), // Stored as String
-      'role': role,
+      'dateOfBirth': dob.toIso8601String(), // Convert DateTime to String for storage
+      'role': role, // Default role is Student
       'createdAt': FieldValue.serverTimestamp(),
       'profileComplete': true, // Profile is complete at this point
       'authMethod': 'manual', // <-- NEW FIELD
@@ -150,7 +149,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
         await userCredential.user!.updateDisplayName(_displayName.trim());
 
-        // For manual sign-up, all required data is provided here, so we save the complete profile.
         await _saveProfileToFirestore(
           userCredential.user!,
           dob: _dateOfBirth!,
@@ -159,7 +157,12 @@ class _SignInScreenState extends State<SignInScreen> {
         );
       }
 
-      // Removed manual navigation: AuthWrapper will handle navigation to /home
+      // 🎯 FIX: Explicitly navigate to the AuthWrapper route ('/')
+      // This ensures the AuthWrapper immediately checks the new user state and redirects.
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+      return; // Exit the function after successful navigation
 
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred, please check your credentials.';
@@ -172,7 +175,9 @@ class _SignInScreenState extends State<SignInScreen> {
     } catch (e) {
       _showError('Operation failed: $e');
     } finally {
-      if (mounted) {
+      // Reset loading state only if the widget is still mounted
+      // Only reset if the function hasn't already navigated (i.e., if an error occurred)
+      if (mounted && _auth.currentUser == null) {
         setState(() {
           _isLoading = false;
         });
@@ -232,6 +237,12 @@ class _SignInScreenState extends State<SignInScreen> {
         print('Firestore document created for new Google user: ${user.uid}');
       }
       // -------------------------------------------------------------
+      // 🎯 FIX: Explicitly navigate to the AuthWrapper route ('/')
+      // This ensures the AuthWrapper immediately checks the new user state and redirects.
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+      return; // Exit the function after successful navigation
 
     } on FirebaseAuthException catch (e) {
       _showError('Failed to sign in with Google: ${e.message}');
@@ -239,7 +250,8 @@ class _SignInScreenState extends State<SignInScreen> {
       _showError('Operation failed: $e');
     } finally {
       // Reset loading state only if the widget is still mounted
-      if (mounted) {
+      // Only reset if the function hasn't already navigated (i.e., if an error occurred)
+      if (mounted && _auth.currentUser == null) {
         setState(() {
           _isLoading = false;
         });
@@ -391,7 +403,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           decoration: const InputDecoration(
                             labelText: 'Confirm Password',
                             border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.lock),
+                            prefixIcon: const Icon(Icons.lock),
                           ),
                           obscureText: true,
                           validator: (value) {
