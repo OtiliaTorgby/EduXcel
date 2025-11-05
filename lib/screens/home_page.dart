@@ -12,6 +12,8 @@ import '../../screens/feedbackScreen.dart';
 import '../../screens/notifications_page.dart';
 import '../../screens/profile_screen.dart';
 import 'students/program_list_screen.dart';
+import 'students/continue_learning.dart';
+import 'students/achievements.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -161,7 +163,7 @@ class StudentHomePage extends StatelessWidget {
           // Collapsible header with gradient and actions
           SliverAppBar(
             pinned: true,
-            expandedHeight: 210,
+            expandedHeight: 250,
             backgroundColor: primary,
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
@@ -261,14 +263,13 @@ class StudentHomePage extends StatelessWidget {
 
                       // Quick feature chips (horizontal)
                       SizedBox(
-                        height: 54,
+                        height: 60,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: [
                             _featureChip(context: context, icon: Icons.school, label: 'My Courses', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen()))),
-                            _featureChip(context: context, icon: Icons.play_circle, label: 'Continue', onTap: () {}),
-                            _featureChip(context: context, icon: Icons.calendar_today, label: 'Schedule', onTap: () {}),
-                            _featureChip(context: context, icon: Icons.star, label: 'Achievements', onTap: () {}),
+                            _featureChip(context: context, icon: Icons.play_circle, label: 'Continue', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContinueLearningPage()))),
+                            _featureChip(context: context, icon: Icons.star, label: 'Achievements', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementsPage()))),
                           ],
                         ),
                       ),
@@ -303,7 +304,7 @@ class StudentHomePage extends StatelessWidget {
                     title: 'Continue Learning',
                     subtitle: 'Resume last activity quickly',
                     icon: Icons.play_circle,
-                    onTap: () {},
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContinueLearningPage())),
                   ),
 
                   _actionCard(
@@ -348,7 +349,9 @@ class StudentHomePage extends StatelessWidget {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               backgroundColor: primary,
                             ),
-                            child: const Text('Explore'),
+                            child: const Text('Explore',
+                            style: TextStyle(color: Colors.white,)
+                            ),
                           )
                         ],
                       ),
