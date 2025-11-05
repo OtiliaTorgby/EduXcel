@@ -101,22 +101,23 @@ Learners can explore programs, track their progress, and submit feedback, while 
 
 ## 📸 Screenshots
 
-<img width="237" height="500" alt="Screenshot 2025-11-05 220400" src="https://github.com/user-attachments/assets/b892f0a2-25e2-4476-9abc-6c7d8cbdd29c" />
-- Our landing page
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/b892f0a2-25e2-4476-9abc-6c7d8cbdd29c" alt="Landing Page" width="250" />
+  <img src="https://github.com/user-attachments/assets/dfcfd689-90cd-432a-99a2-fb82f95574d5" alt="Sign In Page" width="250" />
+  <img src="https://github.com/user-attachments/assets/046f0bf9-f4c6-491b-a003-bb0e8331963d" alt="Student Dashboard" width="250" />
+</p>
+<p align="center">
+  <i>Landing Page | Sign In Page | Student Dashboard</i>
+</p>
 
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/b84db79a-75bc-4ce2-a181-2999a784856d" alt="Admin Dashboard Part 1" width="250" />
+  <img src="https://github.com/user-attachments/assets/24746603-3102-433e-b684-05a7d2049ede" alt="Admin Dashboard Part 2" width="250" />
+</p>
+<p align="center">
+  <i>Admin Dashboard with Menu Drawer</i>
+</p>
 
-<img width="242" height="501" alt="Screenshot 2025-11-05 220414" src="https://github.com/user-attachments/assets/dfcfd689-90cd-432a-99a2-fb82f95574d5" />
-- Our sign in page. Taking you either to a student page or an admin page depending on who signs in.
-
-<img width="244" height="496" alt="Screenshot 2025-11-05 220458" src="https://github.com/user-attachments/assets/046f0bf9-f4c6-491b-a003-bb0e8331963d" />
-- Our Student Dashboard.
-
-  
-<img width="236" height="488" alt="Screenshot 2025-11-05 220531" src="https://github.com/user-attachments/assets/b84db79a-75bc-4ce2-a181-2999a784856d" />
-<img width="233" height="490" alt="Screenshot 2025-11-05 220542" src="https://github.com/user-attachments/assets/24746603-3102-433e-b684-05a7d2049ede" />
-- Our Admin Dashboard with a menu drawer
-
----
 
 
 ---
