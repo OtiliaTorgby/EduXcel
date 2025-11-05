@@ -5,9 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Global variables provided by the canvas environment
 const String __app_id = 'eduxcel';
-final Map<String, dynamic> firebaseConfig = {}; // Placeholder for __firebase_config
 
 enum AuthMode { signIn, signUp }
 
@@ -18,11 +16,9 @@ class SignInScreen extends StatefulWidget {
   State<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignInScreenState extends State<SignInScreen> {
+class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderStateMixin {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
-
-  // New Fields for Sign Up
   final _formKey = GlobalKey<FormState>();
   AuthMode _authMode = AuthMode.signIn;
   String _email = '';
@@ -32,8 +28,9 @@ class _SignInScreenState extends State<SignInScreen> {
   DateTime? _dateOfBirth;
   bool _isLoading = false;
 
-  // Local variable to hold the main password controller's text for validation
   final TextEditingController _passwordController = TextEditingController();
+  late AnimationController _animationController;
+  late Animation<double> _animation;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb
@@ -42,132 +39,109 @@ class _SignInScreenState extends State<SignInScreen> {
   );
 
   @override
-  void dispose() {
-    _passwordController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _animation = Tween(begin: 0.0, end: 12.0)
+        .chain(CurveTween(curve: Curves.elasticIn))
+        .animate(_animationController)
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _animationController.reverse();
+        }
+      });
   }
 
-  // --- Utility Functions ---
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
 
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  // Complex Password Validation Logic
+  void _shakeForm() {
+    _animationController.forward(from: 0.0);
+  }
+
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Password is required.';
     }
-    if (value.length < 8) {
-      return 'Must be at least 8 characters.';
-    }
-    // Check for Uppercase, Lowercase, Digit, and Special Character
-    final RegExp passwordRegExp = RegExp(
-      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*(),.?":{}|<>]).{8,}$',
-    );
-
-    if (!passwordRegExp.hasMatch(value)) {
-      return 'Must be 8+ chars & include: Uppercase, Lowercase, Digit, Special Character.';
+    // Strict validation only for sign-up
+    if (_authMode == AuthMode.signUp) {
+      if (value.length < 8) {
+        return 'Must be at least 8 characters.';
+      }
+      final passRegExp = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$%^&*(),.?\":{}|<>]).{8,}$');
+      if (!passRegExp.hasMatch(value)) {
+        return 'Must include uppercase, lowercase, digit, & special character.';
+      }
     }
     return null;
   }
 
-  // Firestore Logic to Save Profile (DoB, default role)
-  Future<DocumentSnapshot<Map<String, dynamic>>> _getProfileDocument(String uid) async {
-    return _firestore
-        .collection('artifacts')
-        .doc(__app_id)
-        .collection('users')
-        .doc(uid)
-        .get();
-  }
-
-  Future<void> _saveProfileToFirestore(User user, {required DateTime dob, String role = 'Student', required String name}) async {
-    final docRef = _firestore
-        .collection('artifacts')
-        .doc(__app_id)
-        .collection('users')
-        .doc(user.uid);
-
+  Future<void> _saveProfileToFirestore(User user, {required DateTime dob, required String name}) async {
+    final docRef = _firestore.collection('artifacts').doc(__app_id).collection('users').doc(user.uid);
     final profileData = {
       'displayName': name,
       'email': user.email,
-      'dateOfBirth': dob.toIso8601String(), // Convert DateTime to String for storage
-      'role': role, // Default role is Student
+      'dateOfBirth': dob.toIso8601String(),
+      'role': 'Student',
       'createdAt': FieldValue.serverTimestamp(),
-      'profileComplete': true, // Profile is complete at this point
-      'authMethod': 'manual', // <-- NEW FIELD
+      'profileComplete': true,
+      'authMethod': 'manual',
     };
-
     await docRef.set(profileData, SetOptions(merge: true));
   }
 
-  // --- Core Authentication Logic (Manual Sign In/Up) ---
-
   Future<void> _submitAuthForm() async {
     if (!_formKey.currentState!.validate()) {
+      _shakeForm();
       return;
     }
     _formKey.currentState!.save();
 
-    if (_authMode == AuthMode.signUp && _password.trim() != _confirmPassword.trim()) {
-      _showError('Passwords do not match.');
-      return;
+    if (_authMode == AuthMode.signUp) {
+      if (_password.trim() != _confirmPassword.trim()) {
+        _showError('Passwords do not match.');
+        return;
+      }
+      if (_dateOfBirth == null) {
+        _showError('Please select your Date of Birth.');
+        return;
+      }
     }
 
-    if (_authMode == AuthMode.signUp && _dateOfBirth == null) {
-      _showError('Please select your Date of Birth.');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() => _isLoading = true);
     try {
       UserCredential userCredential;
-      final email = _email.trim();
-      final password = _password.trim();
-
       if (_authMode == AuthMode.signIn) {
-        userCredential = await _auth.signInWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+        userCredential = await _auth.signInWithEmailAndPassword(email: _email.trim(), password: _password.trim());
       } else {
-        // Sign user up
-        userCredential = await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-
+        userCredential = await _auth.createUserWithEmailAndPassword(email: _email.trim(), password: _password.trim());
         await userCredential.user!.updateDisplayName(_displayName.trim());
-
-        await _saveProfileToFirestore(
-          userCredential.user!,
-          dob: _dateOfBirth!,
-          role: 'Student',
-          name: _displayName.trim(),
-        );
+        await _saveProfileToFirestore(userCredential.user!, dob: _dateOfBirth!, name: _displayName.trim());
       }
-
-      // 🎯 FIX: Explicitly navigate to the AuthWrapper route ('/')
-      // This ensures the AuthWrapper immediately checks the new user state and redirects.
-      if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-      }
-      return; // Exit the function after successful navigation
-
+      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     } on FirebaseAuthException catch (e) {
-      String message = 'An error occurred, please check your credentials.';
+      String message = 'An error occurred. Please check your credentials.';
       if (e.code == 'invalid-credential' || e.code == 'wrong-password' || e.code == 'user-not-found') {
         message = "Invalid email or password. Please try again.";
+        _shakeForm();
       } else if (e.message != null) {
         message = e.message!;
       }
@@ -175,349 +149,226 @@ class _SignInScreenState extends State<SignInScreen> {
     } catch (e) {
       _showError('Operation failed: $e');
     } finally {
-      // Reset loading state only if the widget is still mounted
-      // Only reset if the function hasn't already navigated (i.e., if an error occurred)
-      if (mounted && _auth.currentUser == null) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // --- Core Authentication Logic (Google Sign-In) ---
-
   Future<void> _signInWithGoogle() async {
-    if (_isLoading) return; // Prevent multiple clicks
-    setState(() {
-      _isLoading = true;
-    });
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
 
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
       if (googleUser == null) {
+        setState(() => _isLoading = false);
         return;
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
+      final AuthCredential credential = GoogleAuthProvider.credential(accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
       final User user = userCredential.user!;
 
-      // -------------------------------------------------------------
-      // Logic: Ensure initial Firestore Profile exists for GSI
-      // -------------------------------------------------------------
-      final userDocRef = _firestore
-          .collection('artifacts')
-          .doc(__app_id)
-          .collection('users')
-          .doc(user.uid);
-
+      final userDocRef = _firestore.collection('artifacts').doc(__app_id).collection('users').doc(user.uid);
       final docSnapshot = await userDocRef.get();
 
-      // If the document does NOT exist (first time sign-in via GSI), create it.
       if (!docSnapshot.exists) {
-        // Minimal fields with profileComplete: false
-        final initialProfileData = {
+        await userDocRef.set({
           'email': user.email,
           'displayName': user.displayName ?? '',
           'role': 'Student',
           'createdAt': FieldValue.serverTimestamp(),
-          // This flag ensures the user is routed to CompleteProfileScreen
           'profileComplete': false,
-          'authMethod': 'google', // <-- NEW FIELD
-        };
-
-        await userDocRef.set(initialProfileData);
-        print('Firestore document created for new Google user: ${user.uid}');
-      }
-      // -------------------------------------------------------------
-      // 🎯 FIX: Explicitly navigate to the AuthWrapper route ('/')
-      // This ensures the AuthWrapper immediately checks the new user state and redirects.
-      if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-      }
-      return; // Exit the function after successful navigation
-
-    } on FirebaseAuthException catch (e) {
-      _showError('Failed to sign in with Google: ${e.message}');
-    } catch (e) {
-      _showError('Operation failed: $e');
-    } finally {
-      // Reset loading state only if the widget is still mounted
-      // Only reset if the function hasn't already navigated (i.e., if an error occurred)
-      if (mounted && _auth.currentUser == null) {
-        setState(() {
-          _isLoading = false;
+          'authMethod': 'google',
         });
+      }
+
+      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    } catch (e) {
+      _showError('Failed to sign in with Google: $e');
+    } finally {
+      if (mounted && _auth.currentUser == null) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  // --- Widget Build Methods ---
-
   @override
   Widget build(BuildContext context) {
     final isSignIn = _authMode == AuthMode.signIn;
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                // Title and Welcome
-                Text(
-                  isSignIn ? 'Welcome back!' : 'Join EduXcel!',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  isSignIn ? 'Sign In' : 'Sign Up',
-                  style: Theme.of(context).textTheme.headlineLarge!.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                // Manual Sign In/Up Form
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: <Widget>[
-                      // --- Sign Up Fields Only ---
-                      if (!isSignIn) ...[
-                        TextFormField(
-                          initialValue: _displayName,
-                          decoration: const InputDecoration(
-                            labelText: 'Full Name',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.person),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Full Name is required.';
-                            }
-                            return null;
-                          },
-                          onSaved: (value) {
-                            _displayName = value!.trim();
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        // Date of Birth Field (with date picker)
-                        TextFormField(
-                            decoration: InputDecoration(
-                              labelText: 'Date of Birth',
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.calendar_today),
-                              suffixIcon: _dateOfBirth != null
-                                  ? TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _dateOfBirth = null;
-                                  });
-                                },
-                                child: const Text('Clear'),
-                              )
-                                  : null,
-                            ),
-                            readOnly: true,
-                            controller: TextEditingController(
-                              text: _dateOfBirth == null
-                                  ? ''
-                                  : '${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}',
-                            ),
-                            onTap: () async {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime(2000),
-                                firstDate: DateTime(1950),
-                                lastDate: DateTime.now(),
-                              );
-                              if (date != null) {
-                                setState(() {
-                                  _dateOfBirth = date;
-                                });
-                              }
-                            },
-                            validator: (value) {
-                              if (!isSignIn && _dateOfBirth == null) {
-                                return 'Date of Birth is required.';
-                              }
-                              return null;
-                            }
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      // --- Common Fields (Email) ---
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Email address',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.email),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.isEmpty || !value.contains('@')) {
-                            return 'Please enter a valid email address.';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _email = value!;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // --- Common Fields (Password) ---
-                      TextFormField(
-                        controller: _passwordController, // Use the controller here
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.lock),
-                          // Hint for complex validation
-                          hintText: !isSignIn ? '8+ chars, Uppercase, Digit, Special' : null,
-                        ),
-                        obscureText: true,
-                        // Apply complex validation only on Sign Up
-                        validator: isSignIn ? null : _validatePassword,
-                        onSaved: (value) {
-                          _password = value!.trim();
-                        },
-                      ),
-
-                      // --- Password Confirmation Field (Sign Up Only) ---
-                      if (!isSignIn) ...[
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          decoration: const InputDecoration(
-                            labelText: 'Confirm Password',
-                            border: OutlineInputBorder(),
-                            prefixIcon: const Icon(Icons.lock),
-                          ),
-                          obscureText: true,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please confirm your password.';
-                            }
-                            // Compare the current input value (value)
-                            // against the main password field's text, trimmed.
-                            if (value.trim() != _passwordController.text.trim()) {
-                              return 'Passwords do not match.';
-                            }
-                            return null;
-                          },
-                          onSaved: (value) {
-                            _confirmPassword = value!.trim();
-                          },
-                        ),
-                      ],
-
-
-                      if (isSignIn)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              _showError('Forgot password functionality not yet implemented.');
-                            },
-                            child: const Text('Forgot your password?'),
-                          ),
-                        ),
-
-                      const SizedBox(height: 20),
-
-                      // Submit Button
-                      if (_isLoading)
-                        const CircularProgressIndicator()
-                      else
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _submitAuthForm,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF673AB7), // Purple color
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(isSignIn ? 'Sign In' : 'Sign Up'),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // Divider or Spacer
-                const Text('OR', style: TextStyle(color: Colors.grey)),
-
-                const SizedBox(height: 30),
-
-                // Google Sign-In Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    // NOTE: You must provide a 'assets/google.png' image file in your Flutter assets folder.
-                    icon: Image.asset(
-                      'assets/google.png',
-                      height: 24,
-                    ),
-                    label: Text('${isSignIn ? 'Sign In' : 'Sign Up'} with Google'),
-                    onPressed: _isLoading ? null : _signInWithGoogle,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      textStyle: const TextStyle(fontSize: 18),
-                      side: const BorderSide(color: Colors.grey, width: 0.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Switch Auth Mode Link
-                Row(
+      body: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(_animation.value, 0),
+            child: child,
+          );
+        },
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(isSignIn ? "Don't have an account yet?" : "Already have an account?"),
-                    TextButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                        setState(() {
-                          _authMode = isSignIn ? AuthMode.signUp : AuthMode.signIn;
-                          _formKey.currentState!.reset(); // Clear form on switch
-                          _passwordController.clear(); // Clear controller explicitly
-                          _dateOfBirth = null; // Clear DOB explicitly
-                        });
-                      },
-                      child: Text(isSignIn ? 'Sign up' : 'Sign in'),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Icon(Icons.school, color: Colors.white, size: 80),
+                    const SizedBox(height: 20),
+                    Text(
+                      isSignIn ? 'Welcome Back!' : 'Create Account',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1.2),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isSignIn ? 'Sign in to continue your journey' : 'Join the community to get started',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16, color: Colors.white70),
+                    ),
+                    const SizedBox(height: 40),
+                    Form(
+                      key: _formKey,
+                      child: Column(
+                        children: <Widget>[
+                          if (!isSignIn) ...[
+                            _buildTextField(label: 'Full Name', icon: Icons.person, onSaved: (v) => _displayName = v!, validator: (v) => v!.isEmpty ? 'Full Name is required.' : null),
+                            const SizedBox(height: 16),
+                            _buildDatePickerField(context),
+                            const SizedBox(height: 16),
+                          ],
+                          _buildTextField(label: 'Email', icon: Icons.email, onSaved: (v) => _email = v!, validator: (v) => v!.isEmpty ? 'Email is required.' : null, keyboardType: TextInputType.emailAddress),
+                          const SizedBox(height: 16),
+                          _buildTextField(label: 'Password', icon: Icons.lock, onSaved: (v) => _password = v!, validator: _validatePassword, obscureText: true, controller: _passwordController),
+                          if (!isSignIn) ...[
+                            const SizedBox(height: 16),
+                            _buildTextField(label: 'Confirm Password', icon: Icons.lock_outline, onSaved: (v) => _confirmPassword = v!, validator: (v) => v != _passwordController.text ? 'Passwords do not match.' : null, obscureText: true),
+                          ],
+                          const SizedBox(height: 30),
+                          if (_isLoading)
+                            const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
+                          else ...[
+                            _buildSubmitButton(isSignIn),
+                            const SizedBox(height: 16),
+                            _buildGoogleSignInButton(),
+                          ],
+                          const SizedBox(height: 20),
+                          _buildAuthModeSwitch(isSignIn),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({required String label, required IconData icon, required FormFieldSetter<String> onSaved, FormFieldValidator<String>? validator, bool obscureText = false, TextInputType? keyboardType, TextEditingController? controller}) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white70),
+        prefixIcon: Icon(icon, color: Colors.white70),
+        filled: true,
+        fillColor: Colors.black.withOpacity(0.2),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white, width: 2)),
+        errorStyle: const TextStyle(color: Colors.yellowAccent, fontWeight: FontWeight.bold),
+      ),
+      style: const TextStyle(color: Colors.white),
+      obscureText: obscureText,
+      validator: validator,
+      onSaved: onSaved,
+      keyboardType: keyboardType,
+    );
+  }
+
+  Widget _buildDatePickerField(BuildContext context) {
+    return TextFormField(
+      readOnly: true,
+      controller: TextEditingController(
+        text: _dateOfBirth == null ? '' : '${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}',
+      ),
+      decoration: InputDecoration(
+        labelText: 'Date of Birth',
+        labelStyle: const TextStyle(color: Colors.white70),
+        prefixIcon: const Icon(Icons.calendar_today, color: Colors.white70),
+        filled: true,
+        fillColor: Colors.black.withOpacity(0.2),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      ),
+      style: const TextStyle(color: Colors.white),
+      onTap: () async {
+        final date = await showDatePicker(
+          context: context,
+          initialDate: _dateOfBirth ?? DateTime(2000),
+          firstDate: DateTime(1920),
+          lastDate: DateTime.now(),
+          builder: (context, child) {
+            return Theme(data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: Color(0xFF8E2DE2), onPrimary: Colors.white)), child: child!); // Themed Date Picker
+          },
+        );
+        if (date != null) setState(() => _dateOfBirth = date);
+      },
+    );
+  }
+
+  Widget _buildSubmitButton(bool isSignIn) {
+    return ElevatedButton(
+      onPressed: _submitAuthForm,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF4A00E0),
+        minimumSize: const Size(double.infinity, 55),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        elevation: 8,
+        shadowColor: Colors.black.withOpacity(0.4),
+      ),
+      child: Text(isSignIn ? 'Sign In' : 'Create Account', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+    );
+  }
+
+  Widget _buildGoogleSignInButton() {
+    return OutlinedButton.icon(
+      onPressed: _signInWithGoogle,
+      icon: Image.asset('assets/google.png', height: 22.0),
+      label: const Text('Sign in with Google', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        side: const BorderSide(color: Colors.white70, width: 1.5),
+        minimumSize: const Size(double.infinity, 55),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+      ),
+    );
+  }
+
+  Widget _buildAuthModeSwitch(bool isSignIn) {
+    return TextButton(
+      onPressed: () {
+        _formKey.currentState?.reset();
+        _dateOfBirth = null;
+        setState(() {
+          _authMode = isSignIn ? AuthMode.signUp : AuthMode.signIn;
+        });
+      },
+      child: Text(
+        isSignIn ? 'Don\'t have an account? Sign Up' : 'Already have an account? Sign In',
+        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
       ),
     );
   }

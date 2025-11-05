@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:device_preview/device_preview.dart';
 
 import 'firebase_options.dart';
 
@@ -13,7 +12,6 @@ import 'screens/profile_screen.dart';
 import 'screens/notifications_page.dart';
 import 'screens/complete_profile_screen.dart';
 import 'screens/home_page.dart';
-import 'screens/admins/admin_page.dart';
 import 'screens/landing_page.dart';
 
 void main() async {
@@ -22,15 +20,8 @@ void main() async {
   await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 2. Wrap the runApp with DevicePreview
-  runApp(
-    DevicePreview(
-      // Set to false when ready for production or specific platform builds
-      enabled: true,
-      // The builder function takes the context and returns your root widget (MyApp)
-      builder: (context) => const MyApp(),
-    ),
-  );
+  // Run the app normally
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -40,10 +31,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EduXcel Firebase App',
-      // 3. Configure MaterialApp to use DevicePreview settings
-      useInheritedMediaQuery: true,
-      locale: DevicePreview.locale(context), // Apply device locale settings
-      builder: DevicePreview.appBuilder,      // Apply device framing and accessibility features
+      // Removed: useInheritedMediaQuery: true (No longer needed without DevicePreview)
 
       theme: ThemeData(
         useMaterial3: true,
@@ -100,7 +88,6 @@ class AuthWrapper extends StatelessWidget {
         final user = snapshot.data;
 
         if (user != null) {
-          // ✅ FIX: Remove hardcoded check.
           // Direct all authenticated users to HomePage.
           // The HomePage widget will contain the logic (via ProfileCheckRouter)
           // to route the user based on their Firestore 'role' and 'profileComplete' status.
