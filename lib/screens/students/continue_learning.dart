@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '/screens/details.dart'; // <-- where DetailsPage & Course are
+import 'package:eduxcel/models/course.dart';
 
 class ContinueLearningPage extends StatefulWidget {
   const ContinueLearningPage({super.key});

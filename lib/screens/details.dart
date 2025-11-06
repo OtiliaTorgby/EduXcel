@@ -1,25 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:eduxcel/enrollment_form_page.dart';
+import 'package:eduxcel/models/course.dart';
 
-// Assuming you have a unified Course model
-// import 'package:eduxcel/models/course.dart'; // Adjust path if needed
-// Or keep it locally if this is a standalone example:
-class Course {
-  final String title;
-  final String description;
-  final int chapters;
-  final String instructor;
 
-  Course({
-    required this.title,
-    required this.description,
-    required this.chapters,
-    required this.instructor,
-  });
-}
 
-// Assuming enrollment_form_page.dart contains the EnrollmentFormPage widget
-// import '../enrollment_form_page.dart'; // Uncomment and adjust path for actual navigation
-
+// ---------------------------------------------
+// 3. DetailsPage Widget
+// ---------------------------------------------
 class DetailsPage extends StatelessWidget {
   final Course course;
 
@@ -86,19 +73,14 @@ class DetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Move "Enroll Now" to a Floating Action Button
+      // --- Floating Action Button (Enroll Now) ---
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // ⚠️ Uncomment and use actual EnrollmentFormPage for navigation
-          /*
+          // ✅ Navigation to EnrollmentFormPage is UNCOMMENTED
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (context) => EnrollmentFormPage(course: course),
             ),
-          );
-          */
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navigating to enrollment for ${course.title}...')),
           );
         },
         backgroundColor: primary,
@@ -109,6 +91,7 @@ class DetailsPage extends StatelessWidget {
 
       body: CustomScrollView(
         slivers: [
+          // --- SliverAppBar (Collapsing Header) ---
           SliverAppBar(
             pinned: true,
             expandedHeight: 250, // More space for the expanded header

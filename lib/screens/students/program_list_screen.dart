@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../details.dart';
+import 'package:eduxcel/models/course.dart';
 
 class ProgramListScreen extends StatefulWidget {
   const ProgramListScreen({super.key});

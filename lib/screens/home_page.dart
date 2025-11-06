@@ -1,4 +1,4 @@
-//home_page.dart
+// home_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -46,37 +46,6 @@ class StudentHomePage extends StatelessWidget {
     }
     // fallback to email local-part or generic label
     return user.email?.split('@')[0] ?? 'Learner';
-  }
-
-  // lightweight accessible chip widget
-  Widget _featureChip({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: onPrimary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 18, color: onPrimary),
-              const SizedBox(width: 8),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   // reusable action card
@@ -149,8 +118,7 @@ class StudentHomePage extends StatelessWidget {
     final primary = colorScheme.primary;
 
     // Measurements for adjusting bottom padding to avoid FAB overlap:
-    // Typical FAB height is 56. We add a margin so content isn't cramped.
-    const double fabHeight = 50.0;
+    const double fabHeight = 56.0; // standard FAB size (use 56 for default)
     const double fabBottomMargin = 16.0;
     final double extraBottomPadding = fabHeight + fabBottomMargin + MediaQuery.of(context).viewPadding.bottom;
 
@@ -158,12 +126,17 @@ class StudentHomePage extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.background,
       resizeToAvoidBottomInset: true,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Explore Programs',
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen())),
+        child: const Icon(Icons.school),
+      ),
       body: CustomScrollView(
         slivers: [
           // Collapsible header with gradient and actions
           SliverAppBar(
             pinned: true,
-            expandedHeight: 200,
+            expandedHeight: 140,
             backgroundColor: primary,
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
@@ -187,6 +160,7 @@ class StudentHomePage extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          // Content that includes Avatar and Text
                           Row(
                             children: [
                               InkWell(
@@ -199,51 +173,31 @@ class StudentHomePage extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Hello, $name', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-                                  const SizedBox(height: 4),
-                                  const Text('Continue your learning journey', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                                ],
+                              // Wrap the Column in Expanded to prevent horizontal overflow
+                              SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.45,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Hello, $name', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                                    const SizedBox(height: 4),
+                                    const Text('Welcome back to your learning dashboard', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
+                          // Icon buttons on the right
                           Row(
                             children: [
                               IconButton(
                                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage(role: 'student'))),
                                 icon: const Icon(Icons.notifications_none, color: Colors.white),
                                 tooltip: 'Notifications',
-                              ),
-                              IconButton(
-                                onPressed: () => _signOut(context),
-                                icon: const Icon(Icons.logout, color: Colors.white),
-                                tooltip: 'Sign out',
-                              ),
+                              )
                             ],
                           ),
                         ],
-                      ),
-
-                      // ❌ REMOVED: Search bar block and its top margin ❌
-                      // const SizedBox(height: 16), (Removed from above the search bar)
-                      // Container(...) (The entire search bar widget)
-                      // const SizedBox(height: 12), (Adjusted below)
-
-                      const SizedBox(height: 24), // Increased spacing after the header row
-
-                      // Quick feature chips (horizontal)
-                      SizedBox(
-                        height: 60,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: [
-                            _featureChip(context: context, icon: Icons.school, label: 'Courses', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen()))),
-                            _featureChip(context: context, icon: Icons.play_circle, label: 'Continue', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContinueLearningPage()))),
-                            _featureChip(context: context, icon: Icons.star, label: 'Achievements', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementsPage()))),
-                          ],
-                        ),
                       ),
                     ],
                   ),
@@ -259,14 +213,14 @@ class StudentHomePage extends StatelessWidget {
               delegate: SliverChildListDelegate(
                 [
                   const SizedBox(height: 6),
-                  const Text('Quick Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text('Quick Access', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
 
-                  // action cards
+                  // Core navigation tiles (restored)
                   _actionCard(
                     context,
                     title: 'Courses',
-                    subtitle: 'View courses you can enroll',
+                    subtitle: 'View available programs and enroll',
                     icon: Icons.school,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen())),
                   ),
@@ -274,9 +228,17 @@ class StudentHomePage extends StatelessWidget {
                   _actionCard(
                     context,
                     title: 'Continue Learning',
-                    subtitle: 'Resume last activity quickly',
+                    subtitle: 'Resume your last activity instantly',
                     icon: Icons.play_circle,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContinueLearningPage())),
+                  ),
+
+                  _actionCard(
+                    context,
+                    title: 'View Achievements',
+                    subtitle: 'Track your badges, certificates, and progress',
+                    icon: Icons.star,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementsPage())),
                   ),
 
                   _actionCard(
@@ -285,14 +247,6 @@ class StudentHomePage extends StatelessWidget {
                     subtitle: 'Share feedback to help us improve EduXcel',
                     icon: Icons.rate_review,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedbackPage())),
-                  ),
-
-                  _actionCard(
-                    context,
-                    title: 'Notifications',
-                    subtitle: 'See the latest announcements and messages',
-                    icon: Icons.campaign,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsPage(role: 'student'))),
                   ),
 
                   // promotional banner
@@ -316,14 +270,15 @@ class StudentHomePage extends StatelessWidget {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              // Example: navigate to program list or specific program
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen()));
+                            },
                             style: ElevatedButton.styleFrom(
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               backgroundColor: primary,
                             ),
-                            child: const Text('Explore',
-                                style: TextStyle(color: Colors.white,)
-                            ),
+                            child: const Text('Explore', style: TextStyle(color: Colors.white)),
                           )
                         ],
                       ),
@@ -331,15 +286,29 @@ class StudentHomePage extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 18),
-                  const Text('Settings & Support', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text('Support & Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
 
+                  // Settings and Support Tiles
                   _actionCard(
                     context,
                     title: 'Profile Settings',
                     subtitle: 'Update personal details and preferences',
                     icon: Icons.person_pin,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                  ),
+
+                  _actionCard(
+                    context,
+                    title: 'Help & Support',
+                    subtitle: 'Get answers to common questions or contact us',
+                    icon: Icons.support_agent,
+                    onTap: () {
+                      // TODO: Implement navigation to a Help/FAQ screen
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigating to Help & Support...')));
+                      }
+                    },
                   ),
 
                   _actionCard(
