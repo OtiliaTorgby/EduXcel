@@ -249,41 +249,7 @@ class StudentHomePage extends StatelessWidget {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedbackPage())),
                   ),
 
-                  // promotional banner
-                  const SizedBox(height: 6),
-                  Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    color: primary.withOpacity(0.04),
-                    elevation: 0,
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('New Program: Design Thinking', style: TextStyle(fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 6),
-                                Text('Enroll now to learn practical problem solving techniques and projects.', style: TextStyle(color: colorScheme.secondary)),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              // Example: navigate to program list or specific program
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen()));
-                            },
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              backgroundColor: primary,
-                            ),
-                            child: const Text('Explore', style: TextStyle(color: Colors.white)),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
+
 
                   const SizedBox(height: 18),
                   const Text('Support & Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -314,7 +280,7 @@ class StudentHomePage extends StatelessWidget {
                   _actionCard(
                     context,
                     title: 'Sign Out',
-                    subtitle: 'Sign out from your account on this device',
+                    subtitle: 'Sign out from your account on this device. Bye bye.',
                     icon: Icons.logout,
                     onTap: () async => _signOut(context),
                     dense: true,
