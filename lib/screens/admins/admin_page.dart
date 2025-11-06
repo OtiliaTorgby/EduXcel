@@ -268,7 +268,7 @@ class _AdminPageState extends State<AdminPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _DashboardCard(
-                    title: 'Active Learners',
+                    title: 'Active Users',
                     icon: Icons.people,
                     onTap: () => Navigator.push(
                       context,
