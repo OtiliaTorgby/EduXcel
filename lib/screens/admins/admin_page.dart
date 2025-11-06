@@ -10,6 +10,7 @@ import 'learners_page.dart';
 import 'programs_page.dart';
 import 'stats_page.dart';
 import 'settings_page.dart';
+import 'new_programs_page.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -198,6 +199,7 @@ class _AdminPageState extends State<AdminPage> {
       ),
       body: Container(
         width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFEDE7F6), Color(0xFFF8BBD0)],
@@ -312,9 +314,17 @@ class _AdminPageState extends State<AdminPage> {
               const SizedBox(height: 25),
               Center(
                 child: ElevatedButton.icon(
-                  onPressed: _showCreateProgramDialog,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CreateProgramPage()),
+                    );
+                  },
                   icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-                  label: const Text('Create New Programs', style: TextStyle(color: Colors.white)),
+                  label: const Text(
+                    'Create New Program',
+                    style: TextStyle(color: Colors.white),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple,
                     padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 17),
@@ -323,6 +333,7 @@ class _AdminPageState extends State<AdminPage> {
                   ),
                 ),
               ),
+
             ],
           ),
         ),
