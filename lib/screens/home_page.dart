@@ -150,7 +150,7 @@ class StudentHomePage extends StatelessWidget {
 
     // Measurements for adjusting bottom padding to avoid FAB overlap:
     // Typical FAB height is 56. We add a margin so content isn't cramped.
-    const double fabHeight = 56.0;
+    const double fabHeight = 50.0;
     const double fabBottomMargin = 16.0;
     final double extraBottomPadding = fabHeight + fabBottomMargin + MediaQuery.of(context).viewPadding.bottom;
 
@@ -163,7 +163,7 @@ class StudentHomePage extends StatelessWidget {
           // Collapsible header with gradient and actions
           SliverAppBar(
             pinned: true,
-            expandedHeight: 250,
+            expandedHeight: 200,
             backgroundColor: primary,
             surfaceTintColor: Colors.transparent,
             automaticallyImplyLeading: false,
@@ -175,7 +175,7 @@ class StudentHomePage extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+                  borderRadius: BorderRadius.only(bottomLeft: Radius.circular(3), bottomRight: Radius.circular(3)),
                 ),
                 padding: const EdgeInsets.fromLTRB(18, 36, 18, 16),
                 child: SafeArea(
@@ -226,40 +226,12 @@ class StudentHomePage extends StatelessWidget {
                         ],
                       ),
 
-                      const SizedBox(height: 16),
+                      // ❌ REMOVED: Search bar block and its top margin ❌
+                      // const SizedBox(height: 16), (Removed from above the search bar)
+                      // Container(...) (The entire search bar widget)
+                      // const SizedBox(height: 12), (Adjusted below)
 
-                      // Search bar
-                      Container(
-                        margin: const EdgeInsets.only(top: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 3))],
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.search, color: Colors.black54),
-                            const SizedBox(width: 10),
-                            const Expanded(
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  hintText: 'Search courses, topics, or instructors',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () {},
-                              icon: const Icon(Icons.mic_none, color: Colors.black54),
-                              tooltip: 'Voice search',
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 24), // Increased spacing after the header row
 
                       // Quick feature chips (horizontal)
                       SizedBox(
@@ -267,7 +239,7 @@ class StudentHomePage extends StatelessWidget {
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: [
-                            _featureChip(context: context, icon: Icons.school, label: 'My Courses', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen()))),
+                            _featureChip(context: context, icon: Icons.school, label: 'Courses', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen()))),
                             _featureChip(context: context, icon: Icons.play_circle, label: 'Continue', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ContinueLearningPage()))),
                             _featureChip(context: context, icon: Icons.star, label: 'Achievements', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementsPage()))),
                           ],
@@ -293,8 +265,8 @@ class StudentHomePage extends StatelessWidget {
                   // action cards
                   _actionCard(
                     context,
-                    title: 'My Courses',
-                    subtitle: 'View and resume courses you are enrolled in',
+                    title: 'Courses',
+                    subtitle: 'View courses you can enroll',
                     icon: Icons.school,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen())),
                   ),
@@ -350,7 +322,7 @@ class StudentHomePage extends StatelessWidget {
                               backgroundColor: primary,
                             ),
                             child: const Text('Explore',
-                            style: TextStyle(color: Colors.white,)
+                                style: TextStyle(color: Colors.white,)
                             ),
                           )
                         ],
