@@ -358,12 +358,6 @@ class StudentHomePage extends StatelessWidget {
           ),
         ],
       ),
-
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProgramListScreen())),
-        label: const Text('Start Learning'),
-        icon: const Icon(Icons.play_arrow),
-      ),
     );
   }
 }
