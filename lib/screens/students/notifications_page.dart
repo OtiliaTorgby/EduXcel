@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Needed to get the current user ID
-import 'package:cloud_firestore/cloud_firestore.dart'; // Needed for Firestore
+import 'dart:math' as math;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '/screens/admins/push_notifications.dart'; // Assuming this path is correct
 
 class NotificationsPage extends StatefulWidget {
@@ -14,40 +15,50 @@ class NotificationsPage extends StatefulWidget {
 
 class _NotificationsPageState extends State<NotificationsPage> {
   final String? _userId = FirebaseAuth.instance.currentUser?.uid;
-  // Firestore reference for the user's inbox
-  CollectionReference? _inboxCollection;
+  Stream<QuerySnapshot>? _inboxStream;
 
   @override
   void initState() {
     super.initState();
     if (_userId != null) {
       // Set up the collection reference to the user's specific inbox subcollection
-      _inboxCollection = FirebaseFirestore.instance
+      _inboxStream = FirebaseFirestore.instance
           .collection('artifacts')
           .doc('eduxcel')
           .collection('users')
           .doc(_userId)
-          .collection('inbox');
+          .collection('inbox')
+      // Order by timestamp descending (newest first)
+          .orderBy('timestamp', descending: true)
+          .snapshots();
     }
   }
 
   // ------------------------------------------------------------------
-  // Firestore Operations (Batch Writes for Read Status)
+  // Firestore Interaction Methods
   // ------------------------------------------------------------------
 
-  // NOTE: This logic relies on fetching the current unread list via a temporary query.
+  int _getUnreadCount(List<QueryDocumentSnapshot> docs) {
+    return docs.where((doc) => (doc['isRead'] == false)).length;
+  }
+
+  /// Updates a specific document in Firestore to set isRead = true.
+  void _markAsRead(DocumentReference docRef) {
+    if (docRef == null) return;
+    try {
+      docRef.update({'isRead': true});
+    } catch (e) {
+      debugPrint('Error marking as read: $e');
+    }
+  }
+
+  /// Commits a batch write to mark all currently unread documents as read.
   Future<void> _markAllAsRead(List<QueryDocumentSnapshot> unreadDocs) async {
-    // Only proceed if the collection is initialized
-    if (_inboxCollection == null) return;
+    if (unreadDocs.isEmpty) return;
 
     final batch = FirebaseFirestore.instance.batch();
-
-    // Only update documents where 'isRead' is currently false
     for (var doc in unreadDocs) {
-      // Ensure we are only adding the update for documents that need it
-      if (doc['isRead'] == false) {
-        batch.update(doc.reference, {'isRead': true});
-      }
+      batch.update(doc.reference, {'isRead': true});
     }
 
     try {
@@ -62,30 +73,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  void _markAsRead(DocumentReference docRef) {
+  /// Deletes a specific document from Firestore.
+  void _removeNotification(DocumentReference docRef) {
     if (docRef == null) return;
     try {
-      // Direct update to Firestore
-      docRef.update({'isRead': true});
-      // The StreamBuilder handles the UI refresh automatically
+      docRef.delete();
     } catch (e) {
-      debugPrint('Error marking as read: $e');
+      debugPrint('Error deleting notification: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete notification.')),
+        );
+      }
     }
   }
 
-  // Helper method to get the stream for the main builder
-  Stream<QuerySnapshot>? get _inboxStream => _inboxCollection != null
-      ? _inboxCollection!.orderBy('timestamp', descending: true).snapshots()
-      : null;
-
-  // ------------------------------------------------------------------
-  // Helper methods for UI (moved from old implementation)
-  // ------------------------------------------------------------------
-
-  int _getUnreadCount(List<QueryDocumentSnapshot> docs) {
-    return docs.where((doc) => (doc['isRead'] == false)).length;
-  }
-
+  /// Converts Firestore Timestamp to a friendly relative time string.
   String _friendlyTime(dynamic ts) {
     if (ts == null) return '';
     if (ts is Timestamp) {
@@ -101,46 +104,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return ts.toString();
   }
 
-
   @override
   Widget build(BuildContext context) {
-    // Colors defined based on original code
     const Color p1 = Color(0xFF7B1FA2);
     const Color p2 = Color(0xFF9C27B0);
     const Color p3 = Color(0xFFBA68C8);
 
-    if (_userId == null || _inboxCollection == null) {
+    // Handle unauthenticated user state outside the stream
+    if (_userId == null || _inboxStream == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('User not logged in or ID is missing.'),
-        ),
+        body: Center(child: Text('Please sign in to view your notifications.')),
       );
     }
 
-
     return Scaffold(
-      extendBodyBehindAppBar: true, // Use the setting from the old rich UI
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: widget.role == 'admin'
-          ? FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const PushNotificationPage(),
-            ),
-          );
-        },
-        icon: const Icon(Icons.send),
-        label: const Text('Push Notification'),
-        backgroundColor: p1,
-        foregroundColor: Colors.white,
-      )
-          : null,
-
-      // ------------------------------------------------------------------
-      // App Bar (Uses StreamBuilder for dynamic badge count)
-      // ------------------------------------------------------------------
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -155,6 +133,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
         ),
         actions: [
+          // StreamBuilder for the badge and mark-all-read action state
           StreamBuilder<QuerySnapshot>(
               stream: _inboxStream,
               builder: (context, snapshot) {
@@ -163,14 +142,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 final unreadDocs = docs.where((d) => d['isRead'] == false).toList();
 
                 return IconButton(
-                  onPressed: unreadCount > 0
-                      ? () {
-                    // Trigger a new fetch to get the latest unread docs, then mark them
-                    _inboxCollection?.where('isRead', isEqualTo: false).get().then((querySnapshot) {
-                      _markAllAsRead(querySnapshot.docs);
-                    });
-                  }
-                      : null,
+                  onPressed: unreadCount > 0 ? () => _markAllAsRead(unreadDocs) : null,
                   tooltip: 'Mark all as read',
                   icon: Stack(
                     alignment: Alignment.center,
@@ -198,11 +170,28 @@ class _NotificationsPageState extends State<NotificationsPage> {
               }
           ),
         ],
-        // The rest of the AppBar configuration (systemOverlayStyle)
+        systemOverlayStyle: Theme.of(context).appBarTheme.systemOverlayStyle,
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: widget.role == 'admin'
+          ? FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PushNotificationPage(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.send),
+        label: const Text('Push Notification'),
+        backgroundColor: p1,
+        foregroundColor: Colors.white,
+      )
+          : null,
 
       // ------------------------------------------------------------------
-      // Body (Main StreamBuilder for List)
+      // 🎯 Main StreamBuilder for List View
       // ------------------------------------------------------------------
       body: Container(
         decoration: const BoxDecoration(
@@ -265,13 +254,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
               }
 
               return RefreshIndicator(
-                onRefresh: () async { /* Stream updates automatically */ },
+                onRefresh: () async { /* Stream handles refresh */ },
                 color: Colors.white,
                 backgroundColor: p2.withOpacity(0.95),
                 child: ListView.builder(
                   physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   padding: const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: 18),
-                  itemCount: notifications.length + 1,
+                  itemCount: notifications.length + 1, // +1 spacer at top
                   itemBuilder: (context, idx) {
                     if (idx == 0) {
                       return Padding(
@@ -282,13 +271,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     final index = idx - 1;
                     final doc = notifications[index];
 
-                    // Safely access fields
                     final isRead = doc['isRead'] as bool? ?? false;
                     final title = doc['title']?.toString() ?? '(No title)';
                     final message = doc['message']?.toString() ?? '';
                     final timestamp = doc['timestamp'];
+
                     final program = doc['program']?.toString() ?? 'General';
                     final sender = doc['sender']?.toString() ?? 'System';
+
 
                     // Use Dismissible for swipe actions
                     return Dismissible(
