@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 // Import your pages
-import '/screens/students/notifications_page.dart';
+import 'notifications_page.dart';
 import 'learners_page.dart';
 import 'programs_page.dart';
 import 'stats_page.dart';

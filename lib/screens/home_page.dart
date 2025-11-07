@@ -9,7 +9,7 @@ import '../sign_in_screen.dart';
 import 'package:eduxcel/profile_check_router.dart';
 
 import '../../screens/feedbackScreen.dart';
-import '../../screens/notifications_page.dart';
+import 'students/notifications_page.dart';
 import '../../screens/profile_screen.dart';
 import 'students/program_list_screen.dart';
 import 'students/continue_learning.dart';
