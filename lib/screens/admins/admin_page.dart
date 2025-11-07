@@ -58,7 +58,7 @@ class _AdminPageState extends State<AdminPage> {
         case 3: // Stats
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const StatsPage()),
+            MaterialPageRoute(builder: (_) => StatsPage()),
           );
           break;
       }
@@ -283,7 +283,7 @@ class _AdminPageState extends State<AdminPage> {
                     icon: Icons.bar_chart,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const StatsPage()),
+                      MaterialPageRoute(builder: (_) => StatsPage()),
                     ),
                   ),
                 ],
@@ -306,7 +306,7 @@ class _AdminPageState extends State<AdminPage> {
                     icon: Icons.show_chart,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const StatsPage()),
+                      MaterialPageRoute(builder: (_) => StatsPage()),
                     ),
                   ),
                 ],
