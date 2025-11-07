@@ -5,7 +5,7 @@ import 'dart:math' as math;
 
 class NotificationsPage extends StatefulWidget {
   final String role; // "admin" or "student"
-  const NotificationsPage({required this.role, Key? key}) : super(key: key);
+  const NotificationsPage({required this.role, super.key});
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -90,7 +90,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   void _markAllAsRead() {
     setState(() {
-      for (var n in notifications) n['isRead'] = true;
+      for (var n in notifications) {
+        n['isRead'] = true;
+      }
     });
   }
 
@@ -399,7 +401,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
 class _TopSummaryCard extends StatelessWidget {
   final int unread;
-  const _TopSummaryCard({required this.unread, Key? key}) : super(key: key);
+  const _TopSummaryCard({required this.unread});
 
   @override
   Widget build(BuildContext context) {

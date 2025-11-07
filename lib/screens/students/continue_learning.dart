@@ -77,7 +77,7 @@ class _ContinueLearningPageState extends State<ContinueLearningPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final background = theme.colorScheme.background;
+    final background = theme.colorScheme.surface;
 
     if (_userId == null) {
       return const Scaffold(

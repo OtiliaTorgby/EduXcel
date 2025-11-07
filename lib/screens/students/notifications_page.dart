@@ -4,7 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 
 class NotificationsPage extends StatefulWidget {
   final String role; // "admin" or "student"
-  const NotificationsPage({required this.role, Key? key}) : super(key: key);
+  const NotificationsPage({required this.role, super.key});
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -114,11 +114,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   // In a real app, send the notification to backend here
                 }
               },
-              child: const Text('Push'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF7B1FA2),
                 foregroundColor: Colors.white,
               ),
+              child: const Text('Push'),
             ),
           ],
         );

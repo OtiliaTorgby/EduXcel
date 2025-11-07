@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class AdminSettingsPage extends StatefulWidget {
-  const AdminSettingsPage({Key? key}) : super(key: key);
+  const AdminSettingsPage({super.key});
 
   @override
   State<AdminSettingsPage> createState() => _AdminSettingsPageState();

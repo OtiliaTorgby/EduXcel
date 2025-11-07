@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class StatsPage extends StatelessWidget {
-  const StatsPage({Key? key}) : super(key: key);
+  const StatsPage({super.key});
 
   // Sample data
   final int totalLearners = 120;

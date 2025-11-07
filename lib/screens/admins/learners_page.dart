@@ -206,7 +206,7 @@ class _LearnersPageState extends State<LearnersPage> {
           ),
         ),
         foregroundColor: Colors.white,
-        title: const Text('Learners Directory', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Users Directory', style: TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
       ),
       body: StreamBuilder<QuerySnapshot>(

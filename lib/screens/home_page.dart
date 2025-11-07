@@ -123,7 +123,7 @@ class StudentHomePage extends StatelessWidget {
     final double extraBottomPadding = fabHeight + fabBottomMargin + MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       resizeToAvoidBottomInset: true,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: FloatingActionButton(

@@ -172,7 +172,7 @@ class _EnrollmentFormPageState extends State<EnrollmentFormPage> {
                     fillColor: Colors.white, // White fill for dropdown clarity
                     filled: true,
                   ),
-                  value: _currentLevel,
+                  initialValue: _currentLevel,
                   items: _levelOptions.map((level) => DropdownMenuItem<String>(value: level, child: Text(level))).toList(),
                   onChanged: (newValue) => setState(() => _currentLevel = newValue!),
                   onSaved: (value) => _currentLevel = value!,

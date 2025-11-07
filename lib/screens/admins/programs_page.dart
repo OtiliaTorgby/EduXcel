@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 class ProgramsPage extends StatefulWidget {
-  const ProgramsPage({Key? key}) : super(key: key);
+  const ProgramsPage({super.key});
 
   @override
   State<ProgramsPage> createState() => _ProgramsPageState();
