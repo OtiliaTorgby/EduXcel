@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import '../details.dart';
 import 'package:eduxcel/models/course.dart';
@@ -12,8 +12,8 @@ class ProgramListScreen extends StatefulWidget {
 }
 
 class _ProgramListScreenState extends State<ProgramListScreen> {
-  List<dynamic> programs = [];
-  List<dynamic> filteredPrograms = [];
+  List<Map<String, dynamic>> programs = [];
+  List<Map<String, dynamic>> filteredPrograms = [];
   bool isLoading = true;
   String _searchQuery = '';
 
@@ -25,12 +25,17 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
 
   Future<void> _loadPrograms() async {
     try {
-      final String response =
-      await rootBundle.loadString('assets/data/programs.json');
-      final data = json.decode(response);
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('artifacts')
+          .doc('eduxcel')
+          .collection('courses')
+          .get();
+
+
+      final data = querySnapshot.docs.map((doc) => doc.data()).toList();
       if (!mounted) return;
       setState(() {
-        programs = List<dynamic>.from(data);
+        programs = List<Map<String, dynamic>>.from(data);
         _applyFilter();
         isLoading = false;
       });
@@ -57,7 +62,7 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
 
   void _applyFilter() {
     if (_searchQuery.trim().isEmpty) {
-      filteredPrograms = List<dynamic>.from(programs);
+      filteredPrograms = List<Map<String, dynamic>>.from(programs);
     } else {
       final q = _searchQuery.toLowerCase();
       filteredPrograms = programs.where((p) {
@@ -78,7 +83,6 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // standalone gradient/colors used only inside this file
     const headerGradient = LinearGradient(
       colors: [Color(0xFF6A1B9A), Color(0xFF8E24AA), Color(0xFFAB47BC)],
       begin: Alignment.topCenter,
@@ -107,22 +111,17 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
           bottom: true,
           child: Column(
             children: [
-              // top decorative panel (makes appbar feel like a header)
               Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
-                    // subtle header card
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.08)),
+                          border: Border.all(color: Colors.white.withOpacity(0.08)),
                         ),
                         child: Row(
                           children: [
@@ -135,7 +134,6 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
                                     color: Colors.white70, fontSize: 14),
                               ),
                             ),
-                            // simple stats or count
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 6),
@@ -156,11 +154,8 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
                   ],
                 ),
               ),
-
-              // Search bar (local filter)
               Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Material(
                   color: Colors.white.withOpacity(0.92),
                   elevation: 2,
@@ -178,15 +173,12 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
                       )
                           : null,
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     ),
                     style: const TextStyle(color: Colors.black87),
                   ),
                 ),
               ),
-
-              // body area: pale container with rounded top
               Expanded(
                 child: Container(
                   margin: const EdgeInsets.only(top: 8),
@@ -212,14 +204,12 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
                           child: Column(
                             children: [
                               Icon(Icons.search_off,
-                                  size: 64,
-                                  color: Colors.grey.shade400),
+                                  size: 64, color: Colors.grey.shade400),
                               const SizedBox(height: 12),
                               Text(
                                 'No programs found',
                                 style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 16),
+                                    color: Colors.grey.shade600, fontSize: 16),
                               ),
                             ],
                           ),
@@ -227,29 +217,20 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
                       ],
                     )
                         : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 18),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                       itemCount: filteredPrograms.length,
                       itemBuilder: (context, index) {
                         final program = filteredPrograms[index];
-                        final title =
-                        (program['title'] ?? 'Untitled')
-                            .toString();
-                        final description =
-                        (program['description'] ?? '')
-                            .toString();
-                        final instructor = (program['instructor'] ??
-                            'Unknown Instructor')
-                            .toString();
+                        final title = (program['title'] ?? 'Untitled').toString();
+                        final description = (program['description'] ?? '').toString();
+                        final instructor = (program['instructor'] ?? 'Unknown Instructor').toString();
                         final chapters = program['chapters'] ?? 0;
                         final avatarTag = 'avatar_$index';
 
                         return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8.0),
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: InkWell(
-                            borderRadius:
-                            BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(14),
                             onTap: () {
                               final course = Course(
                                 title: title,
@@ -260,95 +241,66 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      DetailsPage(course: course),
+                                  builder: (context) => DetailsPage(course: course),
                                 ),
                               );
                             },
                             child: Card(
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               elevation: 3,
                               child: Padding(
                                 padding: const EdgeInsets.all(12.0),
                                 child: Row(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Hero avatar for a subtle transition
                                     Hero(
                                       tag: avatarTag,
                                       child: CircleAvatar(
                                         radius: 28,
-                                        backgroundColor:
-                                        const Color(0xFF8E24AA),
+                                        backgroundColor: const Color(0xFF8E24AA),
                                         child: Text(
-                                          title.isNotEmpty
-                                              ? title[0]
-                                              : '?',
+                                          title.isNotEmpty ? title[0] : '?',
                                           style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 20),
+                                              color: Colors.white, fontSize: 20),
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
                                               Expanded(
                                                 child: Text(
                                                   title,
-                                                  style:
-                                                  const TextStyle(
-                                                    fontWeight:
-                                                    FontWeight
-                                                        .w700,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
                                                     fontSize: 15,
-                                                    color: Color(
-                                                        0xFF4A148C),
+                                                    color: Color(0xFF4A148C),
                                                   ),
                                                 ),
                                               ),
                                               const SizedBox(width: 8),
                                               Container(
-                                                padding:
-                                                const EdgeInsets
-                                                    .symmetric(
-                                                    horizontal:
-                                                    8,
-                                                    vertical: 6),
-                                                decoration:
-                                                BoxDecoration(
-                                                  color: Colors
-                                                      .purpleAccent
-                                                      .withOpacity(
-                                                      0.12),
-                                                  borderRadius:
-                                                  BorderRadius
-                                                      .circular(
-                                                      10),
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 8, vertical: 6),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.purpleAccent.withOpacity(0.12),
+                                                  borderRadius: BorderRadius.circular(10),
                                                 ),
                                                 child: Row(
                                                   children: [
                                                     const Icon(Icons.book,
-                                                        size: 14,
-                                                        color: Color(
-                                                            0xFF6A1B9A)),
-                                                    const SizedBox(
-                                                        width: 6),
+                                                        size: 14, color: Color(0xFF6A1B9A)),
+                                                    const SizedBox(width: 6),
                                                     Text(
                                                       '$chapters',
                                                       style: const TextStyle(
-                                                          fontSize: 12,
-                                                          color: Color(
-                                                              0xFF6A1B9A)),
+                                                          fontSize: 12, color: Color(0xFF6A1B9A)),
                                                     ),
                                                   ],
                                                 ),
@@ -359,20 +311,15 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
                                           Text(
                                             instructor,
                                             style: TextStyle(
-                                                color: Colors
-                                                    .grey.shade700,
-                                                fontSize: 13),
+                                                color: Colors.grey.shade700, fontSize: 13),
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
                                             description,
                                             maxLines: 2,
-                                            overflow:
-                                            TextOverflow.ellipsis,
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                                color:
-                                                Colors.grey.shade800,
-                                                fontSize: 13),
+                                                color: Colors.grey.shade800, fontSize: 13),
                                           ),
                                         ],
                                       ),
