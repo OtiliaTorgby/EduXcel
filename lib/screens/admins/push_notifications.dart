@@ -47,9 +47,6 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
       });
 
       debugPrint("✅ Loaded ${_templates.length} templates");
-      for (var template in _templates) {
-        debugPrint("Template: ${template['id']} - ${template['title']}");
-      }
     } catch (e) {
       debugPrint("❌ Error loading notification templates: $e");
       setState(() => _loadingTemplates = false);
@@ -94,19 +91,44 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
           .collection('artifacts')
           .doc('eduxcel')
           .collection('users');
-      Query filteredQuery = usersQuery.where('role', isEqualTo: _selectedType);
 
-      // If a specific program is selected, filter users by program
-      if (_selectedProgram != null && _selectedProgram!.isNotEmpty) {
-        filteredQuery =
-            filteredQuery.where('program', isEqualTo: _selectedProgram);
-      }
+      // 1. Query only by role, regardless of program selection
+      Query filteredQuery = usersQuery.where('role', isEqualTo: _selectedType);
 
       final usersSnapshot = await filteredQuery.get();
 
-      if (usersSnapshot.docs.isEmpty) {
+      List<QueryDocumentSnapshot> finalRecipients = [];
+
+      // 2. Check program enrollment ONLY if a specific program is selected
+      if (_selectedProgram != null && _selectedProgram!.isNotEmpty) {
+
+        // This is a slow operation (N reads, where N is the user count)
+        for (var userDoc in usersSnapshot.docs) {
+          final userId = userDoc.id;
+          final courseDocRef = FirebaseFirestore.instance
+              .collection('artifacts')
+              .doc('eduxcel')
+              .collection('users')
+              .doc(userId)
+              .collection('coursesEnrolled')
+              .doc(_selectedProgram); // Check for document existence by ID
+
+          final courseSnapshot = await courseDocRef.get();
+
+          if (courseSnapshot.exists) {
+            // User is enrolled in the selected program
+            finalRecipients.add(userDoc);
+          }
+        }
+      } else {
+        // No specific program selected, send to all users of the selected type
+        finalRecipients = usersSnapshot.docs;
+      }
+
+
+      if (finalRecipients.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No users found matching criteria')),
+          const SnackBar(content: Text('No users found matching criteria or enrolled in the selected program')),
         );
         return;
       }
@@ -127,7 +149,8 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
         }
       }
 
-      for (var userDoc in usersSnapshot.docs) {
+      // 3. Commit batch to final recipients list
+      for (var userDoc in finalRecipients) {
         final userId = userDoc.id;
 
         final notifRef = FirebaseFirestore.instance
@@ -141,7 +164,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
         batch.set(notifRef, {
           'title': notificationTitle,
           'message': message,
-          'program': _selectedProgram ?? '',
+          'program': _selectedProgram ?? 'General',
           'timestamp': FieldValue.serverTimestamp(),
           'isRead': false,
           'sender': 'Admin',
@@ -152,7 +175,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Notification sent to ${usersSnapshot.docs.length} users'),
+          content: Text('Notification sent to ${finalRecipients.length} users'),
         ),
       );
 
@@ -171,6 +194,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ... (build method UI remains the same)
     return Scaffold(
       backgroundColor: const Color(0xFFEDE7F6),
       appBar: AppBar(

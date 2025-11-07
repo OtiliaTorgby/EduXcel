@@ -1,7 +1,8 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'dart:math' as math;
+import 'package:firebase_auth/firebase_auth.dart'; // Needed to get the current user ID
+import 'package:cloud_firestore/cloud_firestore.dart'; // Needed for Firestore
+import '/screens/admins/push_notifications.dart'; // Assuming this path is correct
 
 class NotificationsPage extends StatefulWidget {
   final String role; // "admin" or "student"
@@ -12,131 +13,134 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
-  List<Map<String, dynamic>> notifications = [];
-  bool _loading = true;
-  String? _error;
+  final String? _userId = FirebaseAuth.instance.currentUser?.uid;
+  // Firestore reference for the user's inbox
+  CollectionReference? _inboxCollection;
 
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
+    if (_userId != null) {
+      // Set up the collection reference to the user's specific inbox subcollection
+      _inboxCollection = FirebaseFirestore.instance
+          .collection('artifacts')
+          .doc('eduxcel')
+          .collection('users')
+          .doc(_userId)
+          .collection('inbox');
+    }
   }
 
-  Future<void> _loadNotifications() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  // ------------------------------------------------------------------
+  // Firestore Operations (Batch Writes for Read Status)
+  // ------------------------------------------------------------------
+
+  // NOTE: This logic relies on fetching the current unread list via a temporary query.
+  Future<void> _markAllAsRead(List<QueryDocumentSnapshot> unreadDocs) async {
+    // Only proceed if the collection is initialized
+    if (_inboxCollection == null) return;
+
+    final batch = FirebaseFirestore.instance.batch();
+
+    // Only update documents where 'isRead' is currently false
+    for (var doc in unreadDocs) {
+      // Ensure we are only adding the update for documents that need it
+      if (doc['isRead'] == false) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+    }
 
     try {
-      final filePath = widget.role == 'admin'
-          ? 'assets/data/admin_notifications.json'
-          : 'assets/data/student_notifications.json';
-
-      final jsonString = await rootBundle.loadString(filePath);
-      final List<dynamic> data = json.decode(jsonString);
-
-      // defensive cast & normalization: ensure each item is a map and contains keys expected
-      final parsed = <Map<String, dynamic>>[];
-      for (var raw in data) {
-        if (raw is Map<String, dynamic>) {
-          final entry = Map<String, dynamic>.from(raw);
-          // normalize presence of isRead and simple defaults
-          if (!entry.containsKey('isRead')) entry['isRead'] = false;
-          if (!entry.containsKey('title')) entry['title'] = '(No title)';
-          if (!entry.containsKey('message')) entry['message'] = '';
-          if (!entry.containsKey('timestamp')) entry['timestamp'] = null;
-          parsed.add(entry);
-        }
+      await batch.commit();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All notifications marked as read')),
+        );
       }
-
-      // Sort unread first then by timestamp (if available)
-      parsed.sort((a, b) {
-        final aRead = (a['isRead'] == true) ? 1 : 0;
-        final bRead = (b['isRead'] == true) ? 1 : 0;
-        if (aRead != bRead) return aRead - bRead; // unread first
-        // if timestamps exist try to sort descending
-        final aTs = a['timestamp'];
-        final bTs = b['timestamp'];
-        if (aTs is String && bTs is String) {
-          return bTs.compareTo(aTs);
-        }
-        return 0;
-      });
-
-      if (!mounted) return;
-      setState(() {
-        notifications = parsed;
-        _loading = false;
-      });
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Unable to load notifications';
-      });
-      debugPrint('Error loading notifications: $e');
+      debugPrint('Error marking all as read: $e');
     }
   }
 
-  Future<void> _refreshNotifications() async {
-    await _loadNotifications();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notifications updated')),
-      );
+  void _markAsRead(DocumentReference docRef) {
+    if (docRef == null) return;
+    try {
+      // Direct update to Firestore
+      docRef.update({'isRead': true});
+      // The StreamBuilder handles the UI refresh automatically
+    } catch (e) {
+      debugPrint('Error marking as read: $e');
     }
   }
 
-  void _markAllAsRead() {
-    setState(() {
-      for (var n in notifications) {
-        n['isRead'] = true;
-      }
-    });
-  }
+  // Helper method to get the stream for the main builder
+  Stream<QuerySnapshot>? get _inboxStream => _inboxCollection != null
+      ? _inboxCollection!.orderBy('timestamp', descending: true).snapshots()
+      : null;
 
-  void _markAsRead(int index) {
-    setState(() {
-      notifications[index]['isRead'] = true;
-    });
-  }
+  // ------------------------------------------------------------------
+  // Helper methods for UI (moved from old implementation)
+  // ------------------------------------------------------------------
 
-  void _removeNotification(int index) {
-    setState(() {
-      notifications.removeAt(index);
-    });
+  int _getUnreadCount(List<QueryDocumentSnapshot> docs) {
+    return docs.where((doc) => (doc['isRead'] == false)).length;
   }
-
-  int get _unreadCount =>
-      notifications.where((n) => n['isRead'] != true).length;
 
   String _friendlyTime(dynamic ts) {
     if (ts == null) return '';
-    try {
-      final d = DateTime.tryParse(ts.toString());
-      if (d == null) return ts.toString();
+    if (ts is Timestamp) {
+      final d = ts.toDate();
       final now = DateTime.now();
       final diff = now.difference(d);
       if (diff.inMinutes < 1) return 'just now';
-      if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-      if (diff.inHours < 24) return '${diff.inHours}h';
+      if (diff.inHours < 1) return '${diff.inMinutes}m';
+      if (diff.inDays < 1) return '${diff.inHours}h';
       if (diff.inDays < 7) return '${diff.inDays}d';
       return '${d.day}/${d.month}/${d.year}';
-    } catch (_) {
-      return ts.toString();
     }
+    return ts.toString();
   }
+
 
   @override
   Widget build(BuildContext context) {
-    // theme colors
+    // Colors defined based on original code
     const Color p1 = Color(0xFF7B1FA2);
     const Color p2 = Color(0xFF9C27B0);
     const Color p3 = Color(0xFFBA68C8);
 
+    if (_userId == null || _inboxCollection == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('User not logged in or ID is missing.'),
+        ),
+      );
+    }
+
+
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: true, // Use the setting from the old rich UI
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: widget.role == 'admin'
+          ? FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PushNotificationPage(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.send),
+        label: const Text('Push Notification'),
+        backgroundColor: p1,
+        foregroundColor: Colors.white,
+      )
+          : null,
+
+      // ------------------------------------------------------------------
+      // App Bar (Uses StreamBuilder for dynamic badge count)
+      // ------------------------------------------------------------------
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -151,227 +155,261 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
         ),
         actions: [
-          // unread badge + mark all read
-          IconButton(
-            onPressed: _unreadCount > 0 ? _markAllAsRead : null,
-            tooltip: 'Mark all as read',
-            icon: Stack(
-              alignment: Alignment.center,
-              children: [
-                const Icon(Icons.mark_email_read, color: Colors.white),
-                if (_unreadCount > 0)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '$_unreadCount',
-                        style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+          StreamBuilder<QuerySnapshot>(
+              stream: _inboxStream,
+              builder: (context, snapshot) {
+                final docs = snapshot.data?.docs ?? [];
+                final unreadCount = _getUnreadCount(docs);
+                final unreadDocs = docs.where((d) => d['isRead'] == false).toList();
+
+                return IconButton(
+                  onPressed: unreadCount > 0
+                      ? () {
+                    // Trigger a new fetch to get the latest unread docs, then mark them
+                    _inboxCollection?.where('isRead', isEqualTo: false).get().then((querySnapshot) {
+                      _markAllAsRead(querySnapshot.docs);
+                    });
+                  }
+                      : null,
+                  tooltip: 'Mark all as read',
+                  icon: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(Icons.mark_email_read, color: Colors.white),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '$unreadCount',
+                              style: const TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-              ],
-            ),
+                );
+              }
           ),
         ],
-        systemOverlayStyle: Theme.of(context).appBarTheme.systemOverlayStyle,
+        // The rest of the AppBar configuration (systemOverlayStyle)
       ),
+
+      // ------------------------------------------------------------------
+      // Body (Main StreamBuilder for List)
+      // ------------------------------------------------------------------
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(colors: [p1, p2, p3], begin: Alignment.topCenter, end: Alignment.bottomCenter),
         ),
         child: SafeArea(
           bottom: true,
-          child: RefreshIndicator(
-            onRefresh: _refreshNotifications,
-            color: Colors.white,
-            backgroundColor: p2.withOpacity(0.95),
-            // Use CustomScrollView with Sliver so pull-to-refresh works well with collapsing header look
-            child: _loading
-                ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
-                SizedBox(height: 120),
-                Center(child: CircularProgressIndicator(color: Colors.white)),
-              ],
-            )
-                : _error != null
-                ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                const SizedBox(height: 120),
-                Center(
-                  child: Column(
-                    children: [
-                      const Icon(Icons.error_outline, size: 56, color: Colors.white70),
-                      const SizedBox(height: 12),
-                      Text(_error!, style: const TextStyle(color: Colors.white70)),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        onPressed: _loadNotifications,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.white24),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            )
-                : notifications.isEmpty
-                ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                const SizedBox(height: 120),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.inbox_rounded, color: Colors.white70, size: 64),
-                      SizedBox(height: 14),
-                      Text("You're all caught up!", style: TextStyle(color: Colors.white70, fontSize: 18)),
-                      SizedBox(height: 6),
-                      Text("Pull down to refresh.", style: TextStyle(color: Colors.white60)),
-                    ],
-                  ),
-                ),
-              ],
-            )
-                : ListView.builder(
-              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-              padding: const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: 18),
-              itemCount: notifications.length + 1, // +1 spacer at top for visual breathing room
-              itemBuilder: (context, idx) {
-                if (idx == 0) {
-                  // top summary card
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10.0),
-                    child: _TopSummaryCard(unread: _unreadCount),
-                  );
-                }
-                final index = idx - 1;
-                final item = notifications[index];
-                final isRead = item['isRead'] == true;
+          child: StreamBuilder<QuerySnapshot>(
+            stream: _inboxStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
+                    SizedBox(height: 120),
+                    Center(child: CircularProgressIndicator(color: Colors.white)),
+                  ],
+                );
+              }
 
-                // Use Dismissible for swipe actions
-                return Dismissible(
-                  key: ValueKey(item.hashCode ^ index),
-                  direction: DismissDirection.horizontal,
-                  background: _buildDismissBackground(start: true),
-                  secondaryBackground: _buildDismissBackground(start: false),
-                  confirmDismiss: (direction) async {
-                    if (direction == DismissDirection.startToEnd) {
-                      // swipe right -> delete
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (c) => AlertDialog(
-                          title: const Text('Delete notification?'),
-                          content: const Text('This will remove the notification.'),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-                            TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
-                          ],
-                        ),
-                      );
-                      if (confirm == true) {
-                        _removeNotification(index);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification deleted')));
-                      }
-                      return confirm ?? false;
-                    } else {
-                      // Swipe left -> mark read
-                      if (!isRead) {
-                        _markAsRead(index);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marked as read')));
-                      }
-                      return false; // don't dismiss (we only mark read)
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOut,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isRead ? 0.05 : 0.12),
-                          blurRadius: isRead ? 6 : 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
+              if (snapshot.hasError) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    const SizedBox(height: 120),
+                    Center(
+                      child: Column(
+                        children: [
+                          const Icon(Icons.error_outline, size: 56, color: Colors.white70),
+                          const SizedBox(height: 12),
+                          Text('Error loading notifications: ${snapshot.error}', style: const TextStyle(color: Colors.white70)),
+                        ],
+                      ),
                     ),
-                    child: Card(
-                      margin: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                      color: isRead ? Colors.white.withOpacity(0.85) : Colors.white,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        leading: CircleAvatar(
-                          radius: 26,
-                          backgroundColor: isRead ? Colors.purple[100] : const Color(0xFF8E24AA),
-                          child: Icon(isRead ? Icons.mark_email_read : Icons.notifications_active, color: Colors.white),
-                        ),
-                        title: Text(
-                          item['title']?.toString() ?? '',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: isRead ? Colors.grey[700] : const Color(0xFF4A148C),
-                            decoration: isRead ? TextDecoration.lineThrough : null,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 6),
-                            Text(
-                              item['message']?.toString() ?? '',
-                              style: TextStyle(color: isRead ? Colors.grey[700] : Colors.black87, height: 1.3),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                if (item['timestamp'] != null)
-                                  Text(
-                                    _friendlyTime(item['timestamp']),
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                  ),
-                                const Spacer(),
-                                ],
-                            )
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: Icon(isRead ? Icons.done_all : Icons.check_circle_outline, color: isRead ? Colors.grey : const Color(0xFF7B1FA2)),
-                          tooltip: isRead ? 'Already read' : 'Mark as read',
-                          onPressed: isRead ? null : () => _markAsRead(index),
-                        ),
-                        onTap: () {
-                          // Optionally show details or mark as read
-                          if (!isRead) _markAsRead(index);
-                          showDialog(
+                  ],
+                );
+              }
+
+              final notifications = snapshot.data?.docs ?? [];
+
+              if (notifications.isEmpty) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    const SizedBox(height: 120),
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.inbox_rounded, color: Colors.white70, size: 64),
+                          SizedBox(height: 14),
+                          Text("You're all caught up!", style: TextStyle(color: Colors.white70, fontSize: 18)),
+                          SizedBox(height: 6),
+                          Text("Pull down to refresh.", style: TextStyle(color: Colors.white60)),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async { /* Stream updates automatically */ },
+                color: Colors.white,
+                backgroundColor: p2.withOpacity(0.95),
+                child: ListView.builder(
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  padding: const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: 18),
+                  itemCount: notifications.length + 1,
+                  itemBuilder: (context, idx) {
+                    if (idx == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10.0),
+                        child: _TopSummaryCard(unread: _getUnreadCount(notifications)),
+                      );
+                    }
+                    final index = idx - 1;
+                    final doc = notifications[index];
+
+                    // Safely access fields
+                    final isRead = doc['isRead'] as bool? ?? false;
+                    final title = doc['title']?.toString() ?? '(No title)';
+                    final message = doc['message']?.toString() ?? '';
+                    final timestamp = doc['timestamp'];
+                    final program = doc['program']?.toString() ?? 'General';
+                    final sender = doc['sender']?.toString() ?? 'System';
+
+                    // Use Dismissible for swipe actions
+                    return Dismissible(
+                      key: ValueKey(doc.id), // Use Firestore Document ID as key
+                      direction: DismissDirection.horizontal,
+                      background: _buildDismissBackground(start: true),
+                      secondaryBackground: _buildDismissBackground(start: false),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          // Swipe right -> delete
+                          final confirm = await showDialog<bool>(
                             context: context,
                             builder: (c) => AlertDialog(
-                              title: Text(item['title']?.toString() ?? ''),
-                              content: Text(item['message']?.toString() ?? ''),
+                              title: const Text('Delete notification?'),
+                              content: const Text('This will remove the notification.'),
                               actions: [
-                                TextButton(onPressed: () => Navigator.pop(c), child: const Text('Close'))
+                                TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+                                TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
                               ],
                             ),
                           );
-                        },
+                          if (confirm == true) {
+                            _removeNotification(doc.reference); // Firestore Delete
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notification deleted')));
+                          }
+                          return confirm ?? false;
+                        } else {
+                          // Swipe left -> mark read
+                          if (!isRead) {
+                            _markAsRead(doc.reference); // Firestore Mark Read
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marked as read')));
+                          }
+                          return false; // don't dismiss (we only mark read)
+                        }
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(isRead ? 0.05 : 0.12),
+                              blurRadius: isRead ? 6 : 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Card(
+                          margin: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                          color: isRead ? Colors.white.withOpacity(0.85) : Colors.white,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            leading: CircleAvatar(
+                              radius: 26,
+                              backgroundColor: isRead ? Colors.purple[100] : const Color(0xFF8E24AA),
+                              child: Icon(isRead ? Icons.mark_email_read : Icons.notifications_active, color: Colors.white),
+                            ),
+                            title: Text(
+                              title,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: isRead ? Colors.grey[700] : const Color(0xFF4A148C),
+                                decoration: isRead ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 6),
+                                Text(
+                                  message,
+                                  style: TextStyle(color: isRead ? Colors.grey[700] : Colors.black87, height: 1.3),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    // Display Sender and Program/Course
+                                    Text(
+                                      'From: $sender | Course: $program',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w600),
+                                    ),
+                                    const Spacer(),
+                                    if (timestamp != null)
+                                      Text(
+                                        _friendlyTime(timestamp),
+                                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                      ),
+                                  ],
+                                )
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(isRead ? Icons.done_all : Icons.check_circle_outline, color: isRead ? Colors.grey : const Color(0xFF7B1FA2)),
+                              tooltip: isRead ? 'Already read' : 'Mark as read',
+                              onPressed: isRead ? null : () => _markAsRead(doc.reference),
+                            ),
+                            onTap: () {
+                              if (!isRead) _markAsRead(doc.reference);
+                              showDialog(
+                                context: context,
+                                builder: (c) => AlertDialog(
+                                  title: Text(title),
+                                  content: Text(message),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(c), child: const Text('Close'))
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -430,10 +468,9 @@ class _TopSummaryCard extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () {
-                  // scroll-to-top or other quick action if desired
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pull down to refresh')));
                 },
-                child: const Text('Refresh', style: TextStyle(color: Colors.white)),
+                child: const Text('Refresh', style: const TextStyle(color: Colors.white)),
               ),
             ],
           ),
