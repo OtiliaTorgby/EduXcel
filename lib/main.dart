@@ -9,7 +9,7 @@ import 'firebase_options.dart';
 // Screens
 import 'sign_in_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/notifications_page.dart';
+import 'screens/students/notifications_page.dart';
 import 'screens/complete_profile_screen.dart';
 import 'screens/home_page.dart';
 import 'screens/landing_page.dart';
