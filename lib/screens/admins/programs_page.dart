@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-// New Import for Firestore
 import 'package:cloud_firestore/cloud_firestore.dart';
-// No need for 'dart:convert' or 'rootBundle' anymore
+import 'new_programs_page.dart';
 
 // Define a Program model class for better type safety
 class Program {
-  final String id; // Firestore document ID is a String
+  final String id;
   final String title;
   final String description;
   final String instructor;
@@ -19,15 +18,13 @@ class Program {
     required this.users,
   });
 
-  // Factory constructor to create a Program from a Firestore DocumentSnapshot
   factory Program.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return Program(
-      id: doc.id, // Use the document ID for the Program ID
+      id: doc.id,
       title: data['title'] ?? 'No Name',
       description: data['description'] ?? 'No Description',
       instructor: data['instructor'] ?? 'Unknown',
-      // Safely convert 'enrolled' to int. Firestore often stores numbers as 'num'
       users: (data['users'] as num?)?.toInt() ?? 0,
     );
   }
@@ -44,24 +41,21 @@ class _ProgramsPageState extends State<ProgramsPage> {
   List<Program> programs = [];
   bool isLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    // Ensure Firebase is initialized before calling _loadPrograms in main.dart
-    _loadPrograms();
-  }
-
   // Collection reference based on your suggested path: /artifacts/eduxcel/courses
   final CollectionReference coursesCollection =
   FirebaseFirestore.instance.collection('artifacts').doc('eduxcel').collection('courses');
 
+  @override
+  void initState() {
+    super.initState();
+    _loadPrograms();
+  }
+
 
   Future<void> _loadPrograms() async {
     try {
-      // 1. Fetch data from the Firestore collection
       final QuerySnapshot snapshot = await coursesCollection.get();
 
-      // 2. Convert the documents into a list of Program objects
       final List<Program> fetchedPrograms = snapshot.docs.map((doc) {
         return Program.fromFirestore(doc);
       }).toList();
@@ -76,7 +70,20 @@ class _ProgramsPageState extends State<ProgramsPage> {
       setState(() {
         isLoading = false;
       });
-      // Optionally show a user-friendly error message here
+    }
+  }
+
+  void _navigateToCreateProgram() async {
+    final bool? shouldRefresh = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CreateProgramPage()),
+    );
+
+    if (shouldRefresh == true) {
+      setState(() {
+        isLoading = true;
+      });
+      _loadPrograms();
     }
   }
 
@@ -128,6 +135,30 @@ class _ProgramsPageState extends State<ProgramsPage> {
             ),
           );
         },
+      ),
+      // ⭐ UPDATED Floating Action Button for better visibility and appeal
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 8.0, right: 8.0),
+        child: FloatingActionButton.extended(
+          onPressed: _navigateToCreateProgram,
+          // Use a custom shape and styling for a more appealing button
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30), // Increased roundness
+          ),
+          backgroundColor: Colors.deepPurple.shade700, // Slightly darker, richer color
+          foregroundColor: Colors.white,
+          elevation: 8, // Higher elevation for better shadow/prominence
+
+          icon: const Icon(Icons.add_circle, size: 26), // Bigger icon
+          label: const Text(
+            'Create New Program', // More descriptive text
+            style: TextStyle(
+              fontSize: 16, // Larger text
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
       ),
     );
   }
