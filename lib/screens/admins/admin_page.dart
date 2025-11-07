@@ -10,7 +10,8 @@ import 'learners_page.dart';
 import 'programs_page.dart';
 import 'stats_page.dart';
 import 'settings_page.dart';
-import 'new_programs_page.dart';
+// Updated import to reflect the widget name used in the button logic
+import 'new_programs_page.dart'; // Assuming new_programs_page.dart contains CreateProgramPage
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -66,44 +67,7 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
-  void _showCreateProgramDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        String programName = '';
-        return AlertDialog(
-          title: const Text('Create New Program'),
-          content: TextField(
-            decoration: const InputDecoration(
-              labelText: 'Program Name',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) => programName = value,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.add),
-              label: const Text('Create'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
-              onPressed: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Program "$programName" created (not persisted yet)'),
-                    backgroundColor: Colors.deepPurple,
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // NOTE: Removed the unused _showCreateProgramDialog function
 
   // Drawer menu item with navigation
   ListTile _buildMenuItem(IconData icon, String title) {
@@ -312,28 +276,7 @@ class _AdminPageState extends State<AdminPage> {
                 ],
               ),
               const SizedBox(height: 25),
-              Center(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const CreateProgramPage()),
-                    );
-                  },
-                  icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-                  label: const Text(
-                    'Create New Program',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 17),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 5,
-                  ),
-                ),
-              ),
-
+              // NOTE: Removed the ElevatedButton.icon 'Create New Program' here
             ],
           ),
         ),
