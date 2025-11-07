@@ -12,7 +12,7 @@ import 'screens/profile_screen.dart';
 import 'screens/students/notifications_page.dart';
 import 'screens/complete_profile_screen.dart';
 import 'screens/home_page.dart';
-import 'screens/landing_page.dart';
+import 'screens/landing_page.dart'; // Import LandingPage
 
 void main() async {
   // Ensure Flutter and Firebase are initialized before the app starts
@@ -31,7 +31,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'EduXcel Firebase App',
-      // Removed: useInheritedMediaQuery: true (No longer needed without DevicePreview)
 
       theme: ThemeData(
         useMaterial3: true,
@@ -39,14 +38,16 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
 
-      // Starting the app using the AuthWrapper for initial routing logic
-      initialRoute: '/', // Changed to '/' to start at the AuthWrapper immediately
+      // 🎯 CHANGED: Set initialRoute to '/landing'
+      initialRoute: '/landing',
 
       // Define all app routes
       routes: {
-        // The root route checks auth state and directs the user (AuthWrapper)
-        '/': (context) => const AuthWrapper(),
+        // 🎯 NEW: '/landing' is now the root view the user sees first
         '/landing': (context) => const LandingPage(),
+
+        // AuthWrapper is now explicitly navigated to from the landing page or when needed
+        '/': (context) => const AuthWrapper(),
 
         // Define explicit routes for navigation
         '/sign-in': (context) => const SignInScreen(), // Explicit sign-in route
@@ -88,22 +89,12 @@ class AuthWrapper extends StatelessWidget {
         final user = snapshot.data;
 
         if (user != null) {
-          // ⭐ FIX APPLIED HERE: Check if the user is verified
-
-          // Note: In the manual sign-up flow, the user is immediately signed out.
-          // This check is primarily for users who have signed in normally, but
-          // critically, it prevents the app from routing away during the
-          // brief, unverified Auth state after sign-up.
-
-          // Check if the email has been verified. Google/Anonymous users are often treated as verified.
-          // Since manual sign-up REQUIRES verification, we check the flag.
+          // Check if the email has been verified.
           if (user.emailVerified) {
             // Direct verified authenticated users to HomePage.
-            return const HomePage();
+            return HomePage();
           } else {
-            // If authenticated but NOT verified (the short-lived state after sign-up):
-            // Force them to the sign-in screen.
-            // This is the key fix for preventing the flash.
+            // If authenticated but NOT verified: Force them to the sign-in screen.
             return const SignInScreen();
           }
 
