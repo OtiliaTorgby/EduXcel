@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,7 +11,10 @@ const String __app_id = 'eduxcel';
 enum AuthMode { signIn, signUp }
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  // ⭐ UPDATED: Accept flag to show verification message
+  final bool showVerificationMessage;
+
+  const SignInScreen({super.key, this.showVerificationMessage = false});
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -53,6 +57,14 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
           _animationController.reverse();
         }
       });
+
+    // ⭐ FIX: Show message once immediately after sign-up
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.showVerificationMessage) {
+        // Use a generic message since email isn't available in widget properties
+        _showSuccess('Account created! A verification link has been sent. Please check your inbox (including spam/junk) and sign in again once confirmed.');
+      }
+    });
   }
 
   @override
@@ -64,10 +76,22 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
 
   void _showError(String message) {
     if (!mounted) return;
+    HapticFeedback.lightImpact();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -81,7 +105,6 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
     if (value == null || value.isEmpty) {
       return 'Password is required.';
     }
-    // Strict validation only for sign-up
     if (_authMode == AuthMode.signUp) {
       if (value.length < 8) {
         return 'Must be at least 8 characters.';
@@ -94,18 +117,113 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
     return null;
   }
 
-  Future<void> _saveProfileToFirestore(User user, {required DateTime dob, required String name}) async {
-    final docRef = _firestore.collection('artifacts').doc(__app_id).collection('users').doc(user.uid);
-    final profileData = {
-      'displayName': name,
-      'email': user.email,
-      'dateOfBirth': dob.toIso8601String(),
-      'role': 'Student',
-      'createdAt': FieldValue.serverTimestamp(),
-      'profileComplete': true,
-      'authMethod': 'manual',
-    };
-    await docRef.set(profileData, SetOptions(merge: true));
+  // --- Core Auth Handlers ---
+
+  /// Handles manual email/password sign-in, checks verification, and finalizes Firestore profile.
+  Future<void> _handleSignIn() async {
+    UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      email: _email.trim(),
+      password: _password.trim(),
+    );
+
+    User? user = userCredential.user;
+
+    if (user != null) {
+      await user.reload();
+      user = _auth.currentUser;
+
+      if (user!.emailVerified) {
+        final userDocRef = _firestore.collection('artifacts').doc(__app_id).collection('users').doc(user.uid);
+        final docSnapshot = await userDocRef.get();
+
+        if (!docSnapshot.exists) {
+          final tempDocRef = _firestore
+              .collection('artifacts')
+              .doc(__app_id)
+              .collection('temp_profiles')
+              .doc(user.uid);
+
+          final tempSnapshot = await tempDocRef.get();
+
+          if (tempSnapshot.exists && tempSnapshot.data() != null) {
+            final tempProfile = tempSnapshot.data()!;
+
+            await userDocRef.set({
+              'displayName': tempProfile['displayName'],
+              'email': user.email,
+              'dateOfBirth': tempProfile['dateOfBirth'],
+              'role': 'Student',
+              'createdAt': FieldValue.serverTimestamp(),
+              'authMethod': 'manual',
+              'emailVerified': true,
+              'profileComplete': true,
+            });
+
+            await tempDocRef.delete();
+
+            _showSuccess('Verification successful! Welcome to EduXcel.');
+          } else {
+            _showError('Verification successful, but profile data is missing. Please contact support.');
+            await _auth.signOut();
+            return;
+          }
+
+        } else {
+          if (docSnapshot.data()?['emailVerified'] != true) {
+            await userDocRef.update({'emailVerified': true});
+          }
+          _showSuccess('Sign in successful.');
+        }
+
+        if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+
+      } else {
+        await _auth.signOut();
+        throw FirebaseAuthException(
+          code: 'email-not-verified',
+          message: 'Your email is not verified. Check your inbox and click the activation link.',
+        );
+      }
+    }
+  }
+
+  /// Handles manual sign-up: creates Auth user, saves temp profile, sends email, and signs user out.
+  Future<void> _handleSignUp() async {
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      email: _email.trim(),
+      password: _password.trim(),
+    );
+
+    User? user = userCredential.user;
+
+    if (user != null) {
+      await user.updateDisplayName(_displayName.trim());
+
+      final tempDocRef = _firestore
+          .collection('artifacts')
+          .doc(__app_id)
+          .collection('temp_profiles')
+          .doc(user.uid);
+
+      await tempDocRef.set({
+        'displayName': _displayName.trim(),
+        'dateOfBirth': _dateOfBirth!.toIso8601String(),
+      });
+
+      await user.sendEmailVerification();
+
+      await _auth.signOut();
+
+      // ⭐ FIX APPLIED: Force navigation to a fresh SignInScreen instance with the flag set
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const SignInScreen(showVerificationMessage: true), // ⭐ FLAG SET HERE
+          ),
+              (route) => false,
+        );
+      }
+    }
   }
 
   Future<void> _submitAuthForm() async {
@@ -128,20 +246,18 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
 
     setState(() => _isLoading = true);
     try {
-      UserCredential userCredential;
       if (_authMode == AuthMode.signIn) {
-        userCredential = await _auth.signInWithEmailAndPassword(email: _email.trim(), password: _password.trim());
+        await _handleSignIn();
       } else {
-        userCredential = await _auth.createUserWithEmailAndPassword(email: _email.trim(), password: _password.trim());
-        await userCredential.user!.updateDisplayName(_displayName.trim());
-        await _saveProfileToFirestore(userCredential.user!, dob: _dateOfBirth!, name: _displayName.trim());
+        await _handleSignUp();
       }
-      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     } on FirebaseAuthException catch (e) {
       String message = 'An error occurred. Please check your credentials.';
-      if (e.code == 'invalid-credential' || e.code == 'wrong-password' || e.code == 'user-not-found') {
+      if (e.code == 'invalid-credential' || e.code == 'wrong-password' || e.code == 'user-not-found' || e.code == 'invalid-email') {
         message = "Invalid email or password. Please try again.";
         _shakeForm();
+      } else if (e.code == 'email-not-verified') {
+        message = e.message!;
       } else if (e.message != null) {
         message = e.message!;
       }
@@ -153,6 +269,7 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
     }
   }
 
+  // --- Google Sign-In ---
   Future<void> _signInWithGoogle() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
@@ -172,7 +289,10 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
       final userDocRef = _firestore.collection('artifacts').doc(__app_id).collection('users').doc(user.uid);
       final docSnapshot = await userDocRef.get();
 
+      bool requiresProfileCompletion = false;
+
       if (!docSnapshot.exists) {
+        requiresProfileCompletion = true;
         await userDocRef.set({
           'email': user.email,
           'displayName': user.displayName ?? '',
@@ -180,10 +300,20 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
           'createdAt': FieldValue.serverTimestamp(),
           'profileComplete': false,
           'authMethod': 'google',
+          'emailVerified': true,
         });
+      } else if (docSnapshot.data()?['profileComplete'] == false) {
+        requiresProfileCompletion = true;
       }
 
-      if (mounted) Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      if (mounted) {
+        if (requiresProfileCompletion) {
+          _showError("Please complete your profile details (Date of Birth) to continue.");
+          Navigator.of(context).pushNamedAndRemoveUntil('/complete-profile', (route) => false);
+        } else {
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        }
+      }
     } catch (e) {
       _showError('Failed to sign in with Google: $e');
     } finally {
@@ -192,6 +322,10 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
       }
     }
   }
+
+  // --- UI Builders ---
+
+  // ⭐ Removed the persistent _buildVerificationReminder() widget
 
   @override
   Widget build(BuildContext context) {
@@ -236,6 +370,9 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
                       style: const TextStyle(fontSize: 16, color: Colors.white70),
                     ),
                     const SizedBox(height: 40),
+
+                    // No persistent reminder here. The SnackBar handles the message.
+
                     Form(
                       key: _formKey,
                       child: Column(
@@ -320,7 +457,7 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
           firstDate: DateTime(1920),
           lastDate: DateTime.now(),
           builder: (context, child) {
-            return Theme(data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: Color(0xFF8E2DE2), onPrimary: Colors.white)), child: child!); // Themed Date Picker
+            return Theme(data: ThemeData.dark().copyWith(colorScheme: const ColorScheme.dark(primary: Color(0xFF8E2DE2), onPrimary: Colors.white)), child: child!);
           },
         );
         if (date != null) setState(() => _dateOfBirth = date);

@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       // Starting the app using the AuthWrapper for initial routing logic
-      initialRoute: '/landing',
+      initialRoute: '/', // Changed to '/' to start at the AuthWrapper immediately
 
       // Define all app routes
       routes: {
@@ -88,12 +88,28 @@ class AuthWrapper extends StatelessWidget {
         final user = snapshot.data;
 
         if (user != null) {
-          // Direct all authenticated users to HomePage.
-          // The HomePage widget will contain the logic (via ProfileCheckRouter)
-          // to route the user based on their Firestore 'role' and 'profileComplete' status.
-          return const HomePage();
+          // ⭐ FIX APPLIED HERE: Check if the user is verified
+
+          // Note: In the manual sign-up flow, the user is immediately signed out.
+          // This check is primarily for users who have signed in normally, but
+          // critically, it prevents the app from routing away during the
+          // brief, unverified Auth state after sign-up.
+
+          // Check if the email has been verified. Google/Anonymous users are often treated as verified.
+          // Since manual sign-up REQUIRES verification, we check the flag.
+          if (user.emailVerified) {
+            // Direct verified authenticated users to HomePage.
+            return const HomePage();
+          } else {
+            // If authenticated but NOT verified (the short-lived state after sign-up):
+            // Force them to the sign-in screen.
+            // This is the key fix for preventing the flash.
+            return const SignInScreen();
+          }
+
         } else {
-          return const SignInScreen(); // Not signed in
+          // Not signed in
+          return const SignInScreen();
         }
 
       },
