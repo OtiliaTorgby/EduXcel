@@ -186,6 +186,7 @@ class _PushNotificationPageState extends State<PushNotificationPage> {
         elevation: 0,
       ),
       body: Container(
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFFEDE7F6), Color(0xFFF8BBD0)],

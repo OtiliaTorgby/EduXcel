@@ -106,6 +106,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ],
       ),
       body: Container(
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [

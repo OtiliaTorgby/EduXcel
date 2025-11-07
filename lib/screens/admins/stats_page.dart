@@ -100,10 +100,6 @@ class _StatsPageState extends State<StatsPage>
                         ],
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.more_vert, color: Colors.white),
-                    )
                   ],
                 ),
               ),
