@@ -125,7 +125,7 @@ class LandingPage extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Image.asset('assets/youtube.png', height: 36),
+                            Image.asset('assets/icon/youtube.png', height: 36),
                             const SizedBox(width: 12),
                             const Text('Demo Video', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                           ],
@@ -143,7 +143,7 @@ class LandingPage extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Image.asset('assets/github.png', height: 36),
+                            Image.asset('assets/icon/github.png', height: 36),
                             const SizedBox(width: 12),
                             const Text('GitHub Repository', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                           ],
