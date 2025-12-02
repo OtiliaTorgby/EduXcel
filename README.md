@@ -78,9 +78,9 @@ Learners can explore programs, track their progress, and submit feedback, while 
 
 ---
 
-### 🗓️ **Week 3 (20-27 Oct 2025)** YET TO BE DONE
-- Connected **Program Listing** and **Program Details** to mock **JSON data**  
-- Implemented dynamic data loading using `FutureBuilder` and `jsonDecode()`  
+### 🗓️ **Week 3 (20-27 Oct 2025)**
+- Connected **Program Listing** and **Program Details** to mock **Firebase**  
+- Implemented dynamic data loading using `FutureBuilder`  
 - Added a **Feedback Form** with:
   - Input fields for name, email, and message  
   - **Email validation** and error handling  
